@@ -1,0 +1,194 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: "UD Digi Kyokasho NK-R", "UD デジタル 教科書体 NK-R", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
+$presentation-heading-font: "UD Digi Kyokasho NK-B", "UD デジタル 教科書体 NK-B", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
+$presentation-heading-color: #2c3e50;
+$body-color: #333;
+$link-color: #3498db;
+$code-block-bg: #f8f9fa;
+$presentation-font-size-root: 36px;
+
+/*-- scss:rules --*/
+
+/* Google Fonts fallback */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+/* ===== 全体の行間・余白 ===== */
+.reveal .slides section {
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.reveal p {
+  margin-bottom: 0.5em;
+  font-size: 0.95em;
+}
+
+/* ===== 見出し ===== */
+.reveal section h2 {
+  border-bottom: 3px solid #3498db;
+  padding-top: 0;
+  padding-bottom: 0.2em;
+  margin-top: 0;
+  margin-bottom: 0.4em;
+  font-size: 1.4em;
+}
+
+.reveal section h3 {
+  font-size: 1.1em;
+  margin-top: 0.5em;
+  margin-bottom: 0.4em;
+}
+
+/* ===== リスト ===== */
+.reveal ul, .reveal ol {
+  font-size: 0.95em;
+  padding-left: 1.5em;
+}
+
+.reveal li {
+  margin-bottom: 0.4em;
+  line-height: 1.6;
+}
+
+.reveal li > ul,
+.reveal li > ol {
+  margin-top: 0.2em;
+}
+
+/* ===== columns ===== */
+.reveal .columns {
+  font-size: 0.95em;
+  gap: 1.5em;
+}
+
+/* ===== callout ===== */
+.reveal .callout {
+  font-size: 1.0em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding: 0.6em 0.8em;
+}
+
+.reveal .callout .callout-title p {
+  font-size: 1.6em !important;
+}
+
+.reveal .callout .callout-content p {
+  font-size: 1.4em !important;
+}
+
+/* ===== テーブル（遠方でも読めるサイズ） ===== */
+.reveal table {
+  font-size: 0.88em;
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+}
+
+.reveal table th,
+.reveal table td {
+  padding: 0.5em 0.7em;
+}
+
+/* .smaller 付きスライドのテーブルだけ少し小さく */
+.reveal .smaller table {
+  font-size: 0.78em;
+}
+
+/* ===== コード ===== */
+.reveal code {
+  font-size: 0.9em;
+  font-family: "Consolas", "Source Code Pro", monospace;
+}
+
+/* ===== blockquote ===== */
+.reveal blockquote {
+  margin: 0.6em 0;
+  padding: 0.5em 1em;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+/* ===== フッター・ページ番号（フルスクリーンで切れないよう余白確保） ===== */
+.reveal .footer {
+  font-size: 0.45em;
+  bottom: 0.5em !important;
+  z-index: 10;
+}
+
+.reveal .slide-number {
+  font-size: 0.7em;
+  bottom: 1em !important;
+  right: 1em !important;
+  background-color: rgba(0, 0, 0, 0.08);
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  z-index: 10;
+}
+
+.center h2 {
+  text-align: center;
+}
+
+/* ===== タイトルページ: 日本語慣例（所属 → 氏名） ===== */
+#title-slide .quarto-title-author {
+  display: flex;
+  flex-direction: column;
+
+  .quarto-title-affiliation {
+    order: 1;
+    margin-bottom: 0.2em;
+  }
+  .quarto-title-author-name {
+    order: 2;
+  }
+}
+
+/* ===== 脚注をスライド下部に固定（本文と重ならないよう余白確保） ===== */
+.reveal section:has(.aside-footnotes) > :not(aside):not(.notes) {
+  padding-bottom: 0;
+}
+
+.reveal section:has(.aside-footnotes) {
+  padding-bottom: 1.2em !important;
+}
+
+.reveal aside:has(.aside-footnotes) {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-size: 0.5em;
+  color: #666;
+  border-top: 1px solid #ddd;
+  padding-top: 0.3em;
+  margin: 0;
+  background: white;
+  z-index: 5;
+}
+
+.reveal .aside-footnotes {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+/* ===== SVG画像のレスポンシブ対応 ===== */
+.reveal section img[src$=".svg"] {
+  max-height: 280px;
+  width: auto;
+}
+
+/* ===== 番号付きボックス（手順表示用） ===== */
+.box-inv {
+  display: inline-block;
+  width: 1.6em;
+  height: 1.6em;
+  line-height: 1.6em;
+  text-align: center;
+  font-weight: bold;
+  color: #fff;
+  background-color: #3498db;
+  border-radius: 4px;
+  margin-right: 0.3em;
+  font-size: 0.9em;
+  vertical-align: middle;
+}

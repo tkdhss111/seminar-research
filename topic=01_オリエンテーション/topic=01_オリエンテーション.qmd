@@ -1,0 +1,431 @@
+---
+title: "オリエンテーション"
+subtitle: "専門演習（春学期）３年生"
+institute: "東京国際大学<br>データサイエンス教育研究所"
+author: "竹田 恒"
+format:
+  revealjs:
+    embed-resources: false
+    theme: [default, css/custom.scss]
+    logo: css/icon/tiu.png
+    slide-number: "c/t"
+    show-slide-number: all
+    transition: slide
+    chalkboard:
+      boardmarker-width: 2
+      chalk-width: 3
+      chalk-effect: 1.0
+    incremental: false
+    lightbox: true
+    code-line-numbers: false
+    code-copy: true
+    echo: false
+    code-fold: false
+    smaller: false
+    scrollable: false
+    lang: ja
+    fontsize: 1.8em
+    width: 1280
+    height: 720
+    highlight-style: github
+    fig-align: center
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    scroll-view: false
+    background-transition: fade
+    transition-speed: fast
+    preview-links: auto
+    df-print: paged
+    hide-inactive-cursor: true
+    hide-cursor-time: 2000
+    footer: ""
+    center: false
+    include-in-header:
+      - text: |
+          <style>
+          .reveal aside:has(.aside-footnotes) { padding-left: 3em; }
+          html:not(.print-pdf) .reveal .slides section.slide {
+            padding-top: 10px !important;
+          }
+          </style>
+execute:
+  echo: false
+  cache: false
+  freeze: true
+editor:
+  render-on-save: true
+---
+
+## 本日の内容
+
+1. 演習の目的と進め方
+2. 成績評価とスケジュール
+3. GitHub Pages初期設定
+4. 関心テーマの棚卸し
+
+:::{.notes}
+【導入】
+3年生の専門演習初回。学生の緊張をほぐしつつ、13回の見通しを示す。
+自己紹介は省略（すでに顔見知りの前提）。すぐに演習の概要説明に入る。
+:::
+
+# 1. 演習の目的と進め方 {visibility="uncounted"}
+
+## 専門演習の目的
+
+**自分の「問い」をデータで検証し、成果を発信する**
+
+:::: {.columns}
+::: {.column width="50%"}
+### インプット
+- 公開データの探し方
+- R or Pythonによるデータ分析
+- 統計の基本（記述統計・相関・回帰）
+:::
+
+::: {.column width="50%"}
+### アウトプット
+- Quarto Book → GitHub Pages（毎回公開）
+- Reveal.jsスライド発表
+- 教員はURLで毎回の進捗を確認
+:::
+::::
+
+:::{.notes}
+【ポイント】
+- 「問い→データ→分析→発信」の一連の流れを自分の力で完結させることが目標
+- 2年次までに学んだQuartoの基本操作は習得済み前提で進める
+- Excelは使用禁止、すべてR or Pythonで行うことを明確に伝える
+:::
+
+## 使用ツール
+
+| ツール | 用途 |
+|:---|:---|
+| **R / RStudio** | データ加工・集計・可視化・分析 |
+| **Python** | R の代わりに使用可（pandas・matplotlib等） |
+| **Quarto** | レポート（`.qmd`）・スライド（Reveal.js）・Book |
+| **GitHub Pages** | 成果物の公開（Quarto Book） |
+
+:::{.callout-important}
+## Excelは使用禁止
+データ加工・集計・可視化はすべてR or Pythonコードで実施し、Quartoに記述すること。
+:::
+
+:::{.notes}
+【補足】
+- Quartoの基本操作（YAMLヘッダ・Rチャンク・レンダリング）は既習前提
+- RStudioのプロジェクト機能を使ってファイル管理することを推奨
+- GitHubアカウントは今日の授業で使うので、事前に作成済みであること
+:::
+
+## 演習のルール
+
+- **提出方法**：毎回Quarto Bookに成果を追加し、GitHub Pagesに公開
+- **発表**：Reveal.jsスライドで実施
+- **進捗確認**：教員が各自のGitHub Pages URLを訪問して確認
+- **データ**：公開データ（e-Stat・総務省・業界団体・企業IR等）を使用
+- **出典**：使用データの出典を必ず明記
+- **生成AI**：コード補助・文章校正に限り使用可。考察は自分の言葉で書く
+
+:::{.notes}
+【強調事項】
+- 生成AIの使用範囲を明確に。コードのデバッグや文法チェックはOK
+- 分析結果の解釈・考察・ビジネス上の示唆は自分で考えて書く
+- 出典の明記は学術的作法として重要。URLと閲覧日を記録する習慣をつける
+:::
+
+# 2. 成績評価とスケジュール {visibility="uncounted"}
+
+## 成績評価
+
+| 項目 | 割合 | 内容 |
+|:---|---:|:---|
+| 最終レポート | 40% | Quarto BookとしてGitHub Pagesで公開 |
+| 最終発表 | 30% | Reveal.jsスライド（7分＋質疑3分） |
+| 中間報告 | 15% | Reveal.jsスライド（3分） |
+| 授業内課題 | 15% | 各回の提出物 |
+
+:::{.notes}
+【補足】
+- 最終レポートはQuarto Bookとして公開されたURLで評価
+- 最終発表はスライドの構成・発表態度・質疑応答を総合評価
+- 中間報告は進捗確認の意味合い。テーマの明確さとデータ取得状況を見る
+- 授業内課題は毎回のGitHub Pages公開で評価
+:::
+
+## 13回のスケジュール {.smaller}
+
+```{mermaid}
+gantt
+  dateFormat  X
+  axisFormat  第%s回
+  todayMarker off
+
+  section 導入
+    オリエンテーション＋GitHub Pages初期設定 : crit,    s1,  1, 2
+
+  section 研究テーマ策定
+    RQ立案・確定 ★                 : crit,    s2,  2, 3
+
+  section 研究計画策定
+    計画書作成・個別相談 ★          : crit,    s3,  3, 4
+
+  section データ収集
+    公開データ取得・読み込み         : done,    s4,  4, 5
+
+  section データ整理・可視化
+    記述統計・グラフ作成              : done,    s5,  5, 6
+
+  section Webサイト中間整備
+    Book構成見直し・ピアレビュー ★  : crit,    s6,  6, 7
+
+  section 中間報告
+    3分発表（Reveal.js） ★          : crit,    s7,  7, 8
+
+  section 分析
+    クロス集計・相関・回帰            : done,    s8,  8, 10
+
+  section 考察
+    結果の解釈・ビジネス示唆          : done,    s10, 10, 11
+
+  section 発表準備
+    Reveal.js作成・リハーサル        : done,    s11, 11, 13
+
+  section 最終発表
+    7分発表（Reveal.js） ★          : crit,    s13, 13, 14
+```
+
+:::{.notes}
+【説明】
+- ★印が節目の回。特に第2回（テーマ確定）と第7回（中間報告）が前半のマイルストーン
+- 後半は分析→考察→発表準備と段階的に進む
+- GitHub Pagesの初期設定は今日（第1回）で完了させる。以降は毎回公開で進捗確認
+:::
+
+## 各回の概要 {.smaller}
+
+| 回 | フェーズ | テーマ |
+|:--:|:---|:---|
+| 1 | 導入 | オリエンテーション＋GitHub Pages初期設定 |
+| **2** | **テーマ策定** | **研究テーマ策定：問いを立てる ★** |
+| **3** | **計画策定** | **研究計画策定：計画書の作成 ★** |
+| 4 | データ収集 | 公開データの探し方と読み込み |
+| 5 | 可視化 | 記述統計とグラフ作成 |
+| **6** | **中間整備** | **Webサイト中間整備・ピアレビュー ★** |
+| **7** | **中間報告** | **中間報告発表会 ★** |
+| 8 | 分析 | グループ比較とクロス集計 |
+| 9 | 分析 | 相関と回帰の基本 |
+| 10 | 考察 | 結果の解釈と考察の書き方 |
+| 11 | 発表準備 | Reveal.jsスライドの作成 |
+| 12 | 発表準備 | 最終レポート完成・リハーサル |
+| **13** | **最終発表** | **最終研究発表会 ★** |
+
+:::{.notes}
+【補足】
+- 太字＋★の回が評価に直結する重要回
+- 前半（1-7回）でテーマ確定→データ取得→中間発表まで持っていく
+- 後半（8-13回）で分析を深めて最終成果物を完成させる
+:::
+
+# 3. GitHub Pages初期設定 {visibility="uncounted"}
+
+## 毎回の公開ワークフロー
+
+**この演習では、毎回の成果をGitHub Pagesで公開して提出する**
+
+```{mermaid}
+flowchart LR
+    A[.qmdを編集] --> B[git add / commit / push]
+    B --> C[quarto publish gh-pages]
+    C --> D[GitHub Pagesに反映]
+    D --> E[教員がURLで確認]
+    style A fill:#3498db,color:#fff
+    style D fill:#2ecc71,color:#fff
+    style E fill:#e74c3c,color:#fff
+```
+
+:::{.notes}
+【説明】
+- 従来の「.qmdファイルを提出」ではなく、毎回Webサイトとして公開する
+- 教員は各自のURLを訪問して進捗を確認する
+- 公開することで、お互いの進捗も見られるようになる（ピアラーニング）
+- 就活のポートフォリオとしても活用できる
+:::
+
+## リポジトリ作成
+
+[1]{.box-inv}　github.com にログイン
+
+[2]{.box-inv}　右上の「+」→「New repository」
+
+[3]{.box-inv}　設定項目を入力
+
+| 項目 | 設定 |
+|:---|:---|
+| Repository name | `seminar-research`（例） |
+| Description | 専門演習レポート |
+| Public / Private | **Public**（GitHub Pagesに必要） |
+| Add a README | チェックを入れる |
+
+:::{.notes}
+【補足】
+- リポジトリ名は英語・ハイフン区切り
+- Publicでないと無料のGitHub Pagesが使えない
+- READMEにチェックを入れると最初のcommitが自動作成される
+:::
+
+## クローンとプロジェクト作成
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/<username>/seminar-research.git
+cd seminar-research
+
+# Quarto Bookプロジェクトを作成
+quarto create project book .
+```
+
+これで`_quarto.yml`と`index.qmd`が自動生成される。
+
+:::{.callout-important}
+## `<username>`は自分のGitHubユーザー名に置き換えること
+:::
+
+:::{.notes}
+【デモ】
+- 教員のアカウントでデモを実施
+- `git clone`のURLはリポジトリページの「Code」ボタンからコピー
+- `quarto create project book .`は現在のディレクトリにBookプロジェクトを作成
+:::
+
+## 初回デプロイ
+
+```bash
+# Quarto BookをGitHub Pagesにデプロイ
+quarto publish gh-pages
+```
+
+実行すると：
+
+1. HTMLがビルドされる
+2. `gh-pages`ブランチに自動でpush
+3. 数分後にURLが有効になる
+
+**公開URL**：`https://<username>.github.io/seminar-research/`
+
+:::{.callout-warning}
+## GitHub Pagesの設定
+GitHubリポジトリの Settings → Pages → Source を `gh-pages` ブランチに設定すること。
+:::
+
+:::{.notes}
+【トラブルシューティング】
+- 認証エラー → GitHubのPersonal Access Tokenを設定
+- ビルドエラー → _quarto.ymlの記述ミスを確認
+- ページが表示されない → Settings → PagesでSourceがgh-pagesになっているか確認
+- 反映に数分かかることがある。焦らず待つ
+:::
+
+## 毎回の更新フロー
+
+```bash
+# ファイルを編集した後
+git add .
+git commit -m "第○回の成果を追加"
+git push origin main
+
+# サイトを更新
+quarto publish gh-pages
+```
+
+:::{.callout-important}
+## 毎回の授業後にこの手順を実行する
+今日は初回デプロイ。以後、成果物を追加するたびに`quarto publish gh-pages`で更新する。
+これが毎回の「提出」となる。
+:::
+
+:::{.notes}
+【ポイント】
+- 毎回のgit add → commit → push → publishの流れを体に覚えさせる
+- 最初は手順を見ながらでOK。回を重ねるうちに慣れる
+- URLをブックマークしておくこと
+:::
+
+# 4. 関心テーマの棚卸し {visibility="uncounted"}
+
+## 関心テーマの棚卸しワーク
+
+自分の興味・関心を整理して、研究テーマの候補を見つけよう。
+
+[1]{.box-inv}　以下のカテゴリで気になるキーワードを書き出す（5分）
+
+- 日常生活で気になること
+- ニュースで興味を持ったこと
+- アルバイト・就活で感じた疑問
+- 授業で学んで深掘りしたいこと
+
+[2]{.box-inv}　キーワードを「問い」の形に変換する（5分）
+
+- 「〜は〜に影響するのか？」
+- 「〜と〜にはどのような関係があるか？」
+
+:::{.notes}
+【進行】
+- ワークシートを配布（A4用紙でOK）
+- 5分間で自由に書き出す。数は問わない
+- 書けない学生には「最近のバイト先で不思議に思ったこと」など具体的に声をかける
+- 問いの形にする練習が次回のRQ策定につながる
+:::
+
+## 問いの例
+
+- 「コンビニの店舗数は人口密度に比例するのか？」
+- 「円安は訪日観光客数にどの程度影響するか？」
+- 「大学生のアルバイト時間と成績に関係はあるか？」
+- 「ECサイトの売上は季節によってどう変動するか？」
+
+:::{.callout-warning}
+## 次回までの課題
+**RQ（リサーチクエスチョン）案を3つ**考えてくること。
+各RQについて「使えそうなデータ源」も1つ以上メモしておく。
+:::
+
+:::{.notes}
+【次回への橋渡し】
+- 次回は3つのRQ案を持ち寄り、全員で発表・フィードバック
+- RQは完璧でなくてOK。まず「問い」を立てる練習
+- データ源はe-Stat（https://www.e-stat.go.jp/）を見ておくと良い
+- キーワード：「答えられる問い」「データがある問い」「商学的に意味がある問い」
+:::
+
+# ディスカッション {visibility="uncounted"}
+
+## グループディスカッション
+
+**テーマ：「データサイエンスで解き明かしたいビジネスの疑問は何か？」**
+
+今日の授業で紹介されたテーマ例を参考に、自分なりの「問い」をグループで共有しよう。
+
+1. 自分が気になるビジネスの疑問と**その理由**を発表する（1人1分）
+2. グループで意見を共有し、**共通点・相違点**を整理する
+3. グループとして**最も面白いと思う問い**を1つ選び、全体に発表する
+
+:::{.callout-tip}
+## ポイント
+正解はない。身近な疑問ほど良いテーマになることが多い。自分の言葉で話してみよう。
+:::
+
+:::{.notes}
+【進行】
+- 4〜5人のグループに分ける（近くの席同士でOK）
+- ステップ1（5分）：各自が疑問とその理由を1分で発表
+- ステップ2（5分）：グループ内で共通点・相違点を話し合う
+- ステップ3（5分）：グループの代表者が全体に発表（1グループ1分程度）
+
+【ファシリテーションのコツ】
+- 「最近買い物で不思議に思ったことは？」「バイト先で感じた疑問は？」と具体的に聞く
+- 漠然とした疑問には「それをデータで調べるとしたら？」と掘り下げる
+- 今日紹介したテーマ例（コンビニ・EC・観光・賃金）と結びつけるよう促す
+- 発表が苦手な学生には「一言でもいいよ」と声をかける
+:::

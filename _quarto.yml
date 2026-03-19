@@ -1,0 +1,94 @@
+project:
+  type: website
+  output-dir: .
+  render:
+    - "*.qmd"
+    - "**/*.qmd"
+
+website:
+  title: "専門演習（春学期）３年生"
+  navbar:
+    left:
+      - text: "目次"
+        href: index.qmd
+  sidebar:
+    style: docked
+    contents:
+      - text: "目次"
+        href: index.qmd
+      - section: "シラバス"
+        contents:
+          - text: "3年春学期シラバス"
+            href: spring_3y.qmd
+      - section: "本編"
+        contents:
+          - text: "1 オリエンテーション"
+            href: topic=01_オリエンテーション/topic=01_オリエンテーション.qmd
+          - text: "2 研究テーマ策定"
+            href: topic=02_研究テーマ策定/topic=02_研究テーマ策定.qmd
+          - text: "3 研究計画策定"
+            href: topic=03_研究計画策定/topic=03_研究計画策定.qmd
+          - text: "4 データ収集"
+            href: topic=04_データ収集/topic=04_データ収集.qmd
+          - text: "5 データ整理・可視化"
+            href: topic=05_データ整理・可視化/topic=05_データ整理・可視化.qmd
+          - text: "6 Webサイト中間整備"
+            href: topic=06_Webページ作成/topic=06_Webページ作成.qmd
+          - text: "7 中間報告発表会"
+            href: topic=07_中間報告発表会/topic=07_中間報告発表会.qmd
+          - text: "8 グループ比較とクロス集計"
+            href: topic=08_グループ比較とクロス集計/topic=08_グループ比較とクロス集計.qmd
+          - text: "9 相関と回帰の基本"
+            href: topic=09_相関と回帰の基本/topic=09_相関と回帰の基本.qmd
+          - text: "10 結果の解釈と考察"
+            href: topic=10_結果の解釈と考察/topic=10_結果の解釈と考察.qmd
+          - text: "11 発表準備（スライド作成）"
+            href: topic=11_発表準備（スライド作成）/topic=11_発表準備（スライド作成）.qmd
+          - text: "12 最終レポート完成・リハーサル"
+            href: topic=12_最終レポート完成・リハーサル/topic=12_最終レポート完成・リハーサル.qmd
+          - text: "13 最終研究発表会"
+            href: topic=13_最終研究発表会/topic=13_最終研究発表会.qmd
+
+format:
+  html:
+    embed-resources: false
+    lightbox: true
+    toc: true
+    toc-depth: 2
+    number-sections: false
+    code-line-numbers: false
+    code-copy: true
+    code-fold: true
+    theme: [default, custom.scss]
+    reference-location: margin
+    citation-location: margin
+    fig-align: center
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    df-print: paged
+    lang: ja
+    mermaid:
+      theme: default
+
+language:
+  title-block-author-single: "作成者"
+  title-block-author-plural: "作成者"
+  title-block-published: "作成日"
+
+crossref:
+  fig-title: "図"
+  tbl-title: "表"
+  eq-title: "式"
+  sec-prefix: "節"
+  fig-prefix: "図"
+  tbl-prefix: "表"
+  eq-prefix: "式"
+  ref-hyperlink: true
+
+execute:
+  echo: false
+  cache: false
+  freeze: true
+
+editor:
+  render-on-save: true
