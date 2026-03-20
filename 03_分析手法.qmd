@@ -1,0 +1,143 @@
+---
+title: "分析手法"
+---
+
+:::{.callout-tip title="書き方ガイド：分析手法"}
+**何を書くか：** 使用する分析手法の理論的背景と、なぜその手法を選んだかの根拠を述べる章です。
+
+**書き方のコツ：**
+
+- **手法の選定理由** を比較表で示すと説得力が増します
+- **数学的な定義** は LaTeX 数式で正確に記述します
+- パイプライン全体を図解すると読者の理解が深まります
+- 評価指標は定義を明示し、なぜその指標を使うのかを説明します
+
+**Quartoの機能：**
+
+- LaTeX 数式は `$$` で囲みます。`{#eq-label}` で式番号を付与し、`@eq-label` で参照します
+- Mermaid 記法でパイプライン図やフロー図を描けます
+- `#| label: tbl-xxx` と `#| tbl-cap:` で表番号とキャプションを自動付与します
+:::
+
+
+## 手法の選定
+
+本研究では、以下の2手法を比較する。ベースラインとして線形回帰を用い、高精度な予測手法として勾配ブースティングの一種である LightGBM [@Ke2017] を採用する。
+
+| 手法 | 特徴 | 利点 | 欠点 |
+|------|------|------|------|
+| 線形回帰 | 線形モデル | 解釈が容易、計算が高速 | 非線形関係を捉えにくい |
+| LightGBM | 勾配ブースティング決定木 | 高精度、非線形対応 | 過学習リスク、解釈が複雑 |
+
+: 手法の比較 {#tbl-method-comparison}
+
+
+## 線形回帰（ベースライン）
+
+線形回帰モデルは、目的変数 $y$ を説明変数 $\mathbf{x} = (x_1, x_2, \ldots, x_p)$ の線形結合で表現する。
+
+$$
+y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \cdots + \beta_p x_p + \varepsilon
+$$ {#eq-linear}
+
+ここで $\beta_0$ は切片、$\beta_1, \ldots, \beta_p$ は回帰係数、$\varepsilon$ は誤差項である [@James2023]。
+
+
+## LightGBM
+
+LightGBM は、勾配ブースティング決定木（GBDT）の高速な実装である [@Ke2017]。複数の弱学習器（決定木）を逐次的に構築し、残差を学習することで高い予測精度を実現する。
+
+### 勾配ブースティングの概要
+
+勾配ブースティングでは、$M$ 本の決定木 $f_m$ を逐次的に加えることで予測関数 $F$ を構築する。
+
+$$
+F_M(\mathbf{x}) = F_0(\mathbf{x}) + \sum_{m=1}^{M} \eta \cdot f_m(\mathbf{x})
+$$ {#eq-gbdt}
+
+ここで $\eta$ は学習率（learning rate）であり、各ステップの寄与を制御する。各ステップ $m$ では、損失関数 $L$ の負の勾配（擬似残差）に対して決定木 $f_m$ を適合させる。
+
+$$
+r_{im} = -\frac{\partial L(y_i, F_{m-1}(\mathbf{x}_i))}{\partial F_{m-1}(\mathbf{x}_i)}
+$$ {#eq-pseudo-residual}
+
+### 決定木の構造
+
+```{mermaid}
+%%| label: fig-decision-tree
+%%| fig-cap: "決定木による分岐のイメージ"
+flowchart TD
+    A["気温 ≥ 20°C ?"] -->|Yes| B["時間帯 ∈ 通勤時間 ?"]
+    A -->|No| C["降雨あり ?"]
+    B -->|Yes| D["予測: 150台"]
+    B -->|No| E["予測: 90台"]
+    C -->|Yes| F["予測: 25台"]
+    C -->|No| G["予測: 55台"]
+```
+
+### LightGBM の特徴
+
+LightGBM は以下の工夫により高速化を実現している。
+
+1. **Gradient-based One-Side Sampling (GOSS):** 勾配の大きいサンプルを重点的に使用
+2. **Exclusive Feature Bundling (EFB):** 相互排他的な特徴量をまとめて計算量を削減
+3. **Leaf-wise (Best-first) 成長:** Level-wise よりも効率的な木の成長戦略
+
+
+## 説明変数の設計
+
+| 変数名 | 型 | 説明 | 変換 |
+|--------|------|------|------|
+| `hour` | integer | 時間帯 | そのまま使用 |
+| `temperature` | numeric | 気温 | そのまま使用 |
+| `humidity` | numeric | 湿度 | そのまま使用 |
+| `wind_speed` | numeric | 風速 | そのまま使用 |
+| `is_rain` | integer | 降雨フラグ | factor 変換 |
+| `is_weekend` | logical | 休日フラグ | factor 変換 |
+| `month` | integer | 月 | factor 変換 |
+
+: 説明変数一覧 {#tbl-features}
+
+
+## 分析パイプライン
+
+```{mermaid}
+%%| label: fig-pipeline
+%%| fig-cap: "分析パイプライン"
+flowchart LR
+    A[データ生成] --> B[前処理<br>recipe]
+    B --> C[訓練/テスト分割<br>80:20]
+    C --> D[モデル学習]
+    D --> E1[線形回帰]
+    D --> E2[LightGBM]
+    E1 --> F[精度評価<br>MAE/RMSE/R²]
+    E2 --> F
+    F --> G[変数重要度<br>分析]
+```
+
+
+## 精度評価指標
+
+モデルの予測精度を評価するため、以下の3指標を使用する。
+
+### 平均絶対誤差（MAE）
+
+$$
+\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|
+$$ {#eq-mae}
+
+### 二乗平均平方根誤差（RMSE）
+
+$$
+\text{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2}
+$$ {#eq-rmse}
+
+### 決定係数（R²）
+
+$$
+R^2 = 1 - \frac{\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}{\sum_{i=1}^{n}(y_i - \bar{y})^2}
+$$ {#eq-r2}
+
+ここで $y_i$ は実測値、$\hat{y}_i$ は予測値、$\bar{y}$ は実測値の平均、$n$ はサンプル数である。
+
+@eq-mae は外れ値に頑健な指標、@eq-rmse は大きな誤差をより重く評価する指標、@eq-r2 はモデルの説明力を0〜1で表す指標である。

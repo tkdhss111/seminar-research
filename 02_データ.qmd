@@ -1,0 +1,204 @@
+---
+title: "データ"
+---
+
+:::{.callout-tip title="書き方ガイド：データ"}
+**何を書くか：** 分析に使用するデータの全体像を示す章です。データの出典・構造・基本統計量・可視化を通じて、読者がデータを十分に理解できるようにします。
+
+**書き方のコツ：**
+
+- **データ概要** では、取得元・期間・サンプル数・変数の一覧を明示します
+- **基本統計量** は表形式で整理し、データの分布を把握できるようにします
+- **可視化** は目的を明確にして（例：「時系列の傾向を確認する」）、図にキャプションと番号を付けます
+- 前処理の手順はフロー図で示すと理解しやすくなります
+
+**Quartoの機能：**
+
+- R コードブロック `` ```{r} `` でデータ処理と可視化を実行できます
+- `#| label: fig-xxx` と `#| fig-cap:` で図番号とキャプションを自動付与します
+- `@fig-xxx` で本文中からクロスリファレンスできます
+- `::: {.panel-tabset}` でタブ切替パネルを作成できます
+- Mermaid 記法でフロー図を描けます
+:::
+
+
+## データの出典
+
+| 項目 | 内容 |
+|------|------|
+| 利用データ | 東京都シェアサイクル事業オープンデータ（※実際の出典に置き換えてください） |
+| 気象データ | 気象庁 過去の気象データ検索（※実際の出典に置き換えてください） |
+| 取得日 | 2025年○月○日 |
+| 前処理スクリプト | `src/generate_data.R` |
+
+: データの出典 {#tbl-data-source}
+
+
+## データの準備
+
+```{r}
+#| label: setup-data
+#| code-summary: "パッケージ読み込みとデータ読み込み"
+
+pacman::p_load(tidyverse, plotly)
+
+bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
+  mutate(wday = wday(date, label = TRUE, locale = "C"))
+```
+
+
+## データ概要
+
+本研究では、東京都内のシェアサイクル利用数と気象データを組み合わせた合成データセットを使用する。
+
+| 項目 | 内容 |
+|------|------|
+| 対象期間 | 2024年1月1日 〜 2024年12月31日（365日間） |
+| 時間粒度 | 1時間単位 |
+| レコード数 | 8,760件（365日 × 24時間） |
+| 目的変数 | 1時間あたりの利用数（count） |
+| 説明変数 | 気温、湿度、風速、降雨有無、曜日、時間帯 |
+
+: データセットの概要 {#tbl-data-overview}
+
+### 変数一覧
+
+| 変数名 | 型 | 説明 | 単位 |
+|--------|-------|------|------|
+| `date` | Date | 日付 | - |
+| `hour` | integer | 時間帯（0–23） | 時 |
+| `temperature` | numeric | 気温 | °C |
+| `humidity` | numeric | 相対湿度 | % |
+| `wind_speed` | numeric | 風速 | m/s |
+| `is_rain` | integer | 降雨フラグ（0/1） | - |
+| `count` | integer | 利用数（目的変数） | 台 |
+
+: 変数一覧 {#tbl-variables}
+
+
+## 基本統計量
+
+```{r}
+#| label: tbl-summary-stats
+#| tbl-cap: "基本統計量"
+#| code-summary: "基本統計量の算出"
+
+bike_data |>
+  select(temperature, humidity, wind_speed, count) |>
+  pivot_longer(everything(), names_to = "variable", values_to = "value") |>
+  group_by(variable) |>
+  summarise(
+    平均 = round(mean(value), 1),
+    標準偏差 = round(sd(value), 1),
+    最小 = round(min(value), 1),
+    中央値 = round(median(value), 1),
+    最大 = round(max(value), 1),
+    .groups = "drop"
+  ) |>
+  knitr::kable()
+```
+
+
+## 時系列の可視化
+
+@fig-timeseries は日別の平均利用数の推移を示す。夏季に利用数が増加し、冬季に減少する季節パターンが確認できる。
+
+```{r}
+#| label: fig-timeseries
+#| fig-cap: "日別平均利用数の推移"
+#| code-summary: "時系列グラフの作成"
+
+daily_avg <- bike_data |>
+  group_by(date) |>
+  summarise(avg_count = mean(count), .groups = "drop")
+
+plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
+        line = list(color = "#2F5496", width = 1)) |>
+  layout(
+    xaxis = list(title = "日付"),
+    yaxis = list(title = "平均利用数（台/時間）"),
+    margin = list(t = 20)
+  )
+```
+
+
+## 気象データとの関係
+
+@fig-scatter-temp は気温と利用数の関係を示す散布図である。気温が高いほど利用数が増加する正の相関が認められる。
+
+```{r}
+#| label: fig-scatter-temp
+#| fig-cap: "気温と利用数の関係"
+#| code-summary: "散布図の作成"
+
+sample_data <- bike_data |> slice_sample(n = 2000)
+
+plot_ly(sample_data, x = ~temperature, y = ~count, type = "scatter", mode = "markers",
+        marker = list(color = "#2F5496", opacity = 0.3, size = 4)) |>
+  layout(
+    xaxis = list(title = "気温（°C）"),
+    yaxis = list(title = "利用数（台）"),
+    margin = list(t = 20)
+  )
+```
+
+
+## 曜日・時間帯パターン
+
+::: {.panel-tabset}
+
+### 時間帯別
+
+```{r}
+#| label: fig-hourly-pattern
+#| fig-cap: "時間帯別の平均利用数"
+#| code-summary: "時間帯別集計"
+
+hourly_avg <- bike_data |>
+  group_by(hour) |>
+  summarise(avg_count = mean(count), .groups = "drop")
+
+plot_ly(hourly_avg, x = ~hour, y = ~avg_count, type = "bar",
+        marker = list(color = "#2F5496")) |>
+  layout(
+    xaxis = list(title = "時間帯", dtick = 1),
+    yaxis = list(title = "平均利用数（台）"),
+    margin = list(t = 20)
+  )
+```
+
+### 曜日別
+
+```{r}
+#| label: fig-wday-pattern
+#| fig-cap: "曜日別の平均利用数"
+#| code-summary: "曜日別集計"
+
+wday_avg <- bike_data |>
+  group_by(wday) |>
+  summarise(avg_count = mean(count), .groups = "drop")
+
+plot_ly(wday_avg, x = ~wday, y = ~avg_count, type = "bar",
+        marker = list(color = "#4472C4")) |>
+  layout(
+    xaxis = list(title = "曜日"),
+    yaxis = list(title = "平均利用数（台）"),
+    margin = list(t = 20)
+  )
+```
+
+:::
+
+
+## 前処理パイプライン
+
+```{mermaid}
+%%| label: fig-preprocess
+%%| fig-cap: "データ前処理パイプライン"
+flowchart LR
+    A[元データ取得] --> B[欠損値処理]
+    B --> C[特徴量生成]
+    C --> D[時間帯・曜日<br>ダミー変数化]
+    D --> E[訓練/テスト分割]
+    E --> F[モデル入力]
+```

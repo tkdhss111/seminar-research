@@ -1,0 +1,294 @@
+---
+title: "結果と考察"
+---
+
+:::{.callout-tip title="書き方ガイド：結果と考察"}
+**何を書くか：** モデルの学習結果・精度評価・分析結果を客観的に示し、その意味を考察する章です。報告書の中核となる最も重要な章です。
+
+**書き方のコツ：**
+
+- **結果** と **考察** を分けて書きます。結果は客観的事実、考察は解釈と意味づけです
+- 精度は表で比較し、どの手法が優れているかを明確にします
+- グラフは複数の観点から作成します（時系列、誤差分布、変数重要度など）
+- 考察では「なぜそうなったか」の仮説を示し、先行研究との関連を述べます
+
+**Quartoの機能：**
+
+- `plotly` でインタラクティブなグラフを作成できます
+- `::: {.panel-tabset}` でタブ切替パネルを使い、複数の図を整理できます
+- `knitr::kable()` で R の結果をきれいな表として出力できます
+:::
+
+
+## モデル学習
+
+第2章と同一のデータを読み込み、訓練データ（80%）とテストデータ（20%）に分割した。tidymodels フレームワーク [@Kuhn2024] を用いて、線形回帰と LightGBM の2モデルを学習させた。
+
+```{r}
+#| label: setup-model
+#| code-summary: "パッケージ読み込み・データ読み込み・モデル学習"
+#| warning: false
+#| message: false
+#| output: false
+
+pacman::p_load(tidyverse, tidymodels, bonsai, plotly)
+
+# --- データ読み込み ---
+bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
+  mutate(wday = wday(date, label = TRUE, locale = "C"))
+
+# --- モデリング用データ ---
+model_data <- bike_data |>
+  mutate(
+    month = factor(month),
+    is_rain = factor(is_rain),
+    is_weekend = factor(is_weekend)
+  ) |>
+  select(-date, -wday)
+
+# --- 訓練/テスト分割 ---
+set.seed(123)
+split <- initial_split(model_data, prop = 0.8)
+train_data <- training(split)
+test_data  <- testing(split)
+
+# --- レシピ ---
+bike_recipe <- recipe(count ~ ., data = train_data)
+
+# --- 線形回帰 ---
+lm_spec <- linear_reg() |>
+  set_engine("lm")
+
+lm_wf <- workflow() |>
+  add_recipe(bike_recipe) |>
+  add_model(lm_spec)
+
+lm_fit <- fit(lm_wf, data = train_data)
+
+# --- LightGBM ---
+lgbm_spec <- boost_tree(
+  trees = 500,
+  tree_depth = 6,
+  learn_rate = 0.1,
+  min_n = 10
+) |>
+  set_engine("lightgbm") |>
+  set_mode("regression")
+
+lgbm_wf <- workflow() |>
+  add_recipe(bike_recipe) |>
+  add_model(lgbm_spec)
+
+lgbm_fit <- fit(lgbm_wf, data = train_data)
+
+# --- テストデータで予測 ---
+lm_pred <- predict(lm_fit, test_data) |>
+  bind_cols(test_data |> select(count)) |>
+  rename(predicted = .pred, actual = count) |>
+  mutate(model = "線形回帰")
+
+lgbm_pred <- predict(lgbm_fit, test_data) |>
+  bind_cols(test_data |> select(count)) |>
+  rename(predicted = .pred, actual = count) |>
+  mutate(model = "LightGBM")
+
+all_pred <- bind_rows(lm_pred, lgbm_pred)
+
+# テストデータに予測値を追加（可視化用）
+test_with_pred <- test_data |>
+  mutate(
+    pred_lm   = predict(lm_fit, test_data)$.pred,
+    pred_lgbm = predict(lgbm_fit, test_data)$.pred,
+    index = row_number()
+  )
+```
+
+
+## 精度比較
+
+@tbl-accuracy に各モデルのテストデータに対する精度評価結果を示す。
+
+```{r}
+#| label: tbl-accuracy
+#| tbl-cap: "モデル精度の比較"
+#| code-summary: "精度指標の算出"
+
+metrics_fn <- metric_set(mae, rmse, rsq)
+
+accuracy_table <- all_pred |>
+  group_by(model) |>
+  metrics_fn(truth = actual, estimate = predicted) |>
+  select(model, .metric, .estimate) |>
+  pivot_wider(names_from = .metric, values_from = .estimate) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2))) |>
+  rename(モデル = model, MAE = mae, RMSE = rmse, `R²` = rsq)
+
+knitr::kable(accuracy_table)
+```
+
+LightGBM は全ての指標で線形回帰を上回っており、特に RMSE の改善が顕著である。
+
+
+## 予測結果の可視化
+
+@fig-pred-timeseries にテストデータの先頭200件における実測値と予測値の比較を示す。
+
+```{r}
+#| label: fig-pred-timeseries
+#| fig-cap: "実測値と予測値の比較（テストデータ先頭200件）"
+#| code-summary: "予測結果の時系列プロット"
+
+plot_data <- test_with_pred |> slice_head(n = 200)
+
+plot_ly(plot_data, x = ~index) |>
+  add_lines(y = ~count, name = "実測値",
+            line = list(color = "black", width = 1)) |>
+  add_lines(y = ~pred_lgbm, name = "LightGBM",
+            line = list(color = "#2F5496", width = 1, dash = "dot")) |>
+  add_lines(y = ~pred_lm, name = "線形回帰",
+            line = list(color = "#C55A11", width = 1, dash = "dash")) |>
+  layout(
+    xaxis = list(title = "テストデータ インデックス"),
+    yaxis = list(title = "利用数（台）"),
+    margin = list(t = 20),
+    legend = list(x = 0.02, y = 0.98)
+  )
+```
+
+
+## 誤差分析
+
+```{r}
+#| label: fig-error-hist
+#| fig-cap: "予測誤差の分布"
+#| code-summary: "誤差ヒストグラムの作成"
+
+error_data <- all_pred |>
+  mutate(error = predicted - actual)
+
+plot_ly(error_data, x = ~error, color = ~model, type = "histogram",
+        opacity = 0.6, nbinsx = 50,
+        colors = c("LightGBM" = "#2F5496", "線形回帰" = "#C55A11")) |>
+  layout(
+    barmode = "overlay",
+    xaxis = list(title = "予測誤差（台）"),
+    yaxis = list(title = "頻度"),
+    margin = list(t = 20)
+  )
+```
+
+@fig-error-hist より、LightGBM の誤差分布は線形回帰と比べて中心（誤差ゼロ付近）に集中しており、予測のばらつきが小さいことが確認できる。
+
+
+## 変数重要度
+
+```{r}
+#| label: fig-importance
+#| fig-cap: "LightGBM の変数重要度"
+#| code-summary: "変数重要度の抽出と可視化"
+
+importance <- lgbm_fit |>
+  extract_fit_engine() |>
+  lightgbm::lgb.importance() |>
+  as_tibble() |>
+  arrange(desc(Gain)) |>
+  mutate(Feature = fct_reorder(Feature, Gain))
+
+plot_ly(importance, x = ~Gain, y = ~Feature, type = "bar",
+        orientation = "h",
+        marker = list(color = "#2F5496")) |>
+  layout(
+    xaxis = list(title = "重要度（Gain）"),
+    yaxis = list(title = "", categoryorder = "total ascending"),
+    margin = list(l = 100, t = 20)
+  )
+```
+
+@fig-importance より、`hour`（時間帯）と `temperature`（気温）が予測への寄与度が最も高い変数であることがわかる。
+
+
+## 曜日別精度
+
+::: {.panel-tabset}
+
+### MAE
+
+```{r}
+#| label: fig-wday-mae
+#| fig-cap: "曜日別 MAE（LightGBM）"
+#| code-summary: "曜日別精度の算出"
+
+wday_accuracy <- test_data |>
+  mutate(
+    predicted = predict(lgbm_fit, test_data)$.pred,
+    wday = wday(1, label = TRUE, locale = "C")  # placeholder
+  )
+
+# テストデータに曜日情報を付与するため bike_data からマージ
+test_indices <- as.integer(rownames(test_data))
+wday_accuracy <- bike_data |>
+  slice(test_indices) |>
+  select(wday) |>
+  bind_cols(
+    tibble(
+      actual = test_data$count,
+      predicted = predict(lgbm_fit, test_data)$.pred
+    )
+  ) |>
+  mutate(abs_error = abs(predicted - actual))
+
+wday_mae <- wday_accuracy |>
+  group_by(wday) |>
+  summarise(MAE = round(mean(abs_error), 1), .groups = "drop")
+
+plot_ly(wday_mae, x = ~wday, y = ~MAE, type = "bar",
+        marker = list(color = "#2F5496")) |>
+  layout(
+    xaxis = list(title = "曜日"),
+    yaxis = list(title = "MAE（台）"),
+    margin = list(t = 20)
+  )
+```
+
+### RMSE
+
+```{r}
+#| label: fig-wday-rmse
+#| fig-cap: "曜日別 RMSE（LightGBM）"
+#| code-summary: "曜日別 RMSE の算出"
+
+wday_rmse <- wday_accuracy |>
+  group_by(wday) |>
+  summarise(RMSE = round(sqrt(mean((predicted - actual)^2)), 1), .groups = "drop")
+
+plot_ly(wday_rmse, x = ~wday, y = ~RMSE, type = "bar",
+        marker = list(color = "#4472C4")) |>
+  layout(
+    xaxis = list(title = "曜日"),
+    yaxis = list(title = "RMSE（台）"),
+    margin = list(t = 20)
+  )
+```
+
+:::
+
+
+## 考察
+
+本章の分析結果から、以下の考察が得られる。
+
+### モデル性能について
+
+LightGBM は線形回帰と比較して全ての評価指標で優れた性能を示した（@tbl-accuracy）。これは、シェアサイクルの利用パターンが時間帯や気象条件と**非線形な関係**を持つためと考えられる。例えば、通勤時間帯（7-9時、17-19時）に利用数が集中するパターンは、線形モデルでは捉えにくい。
+
+### 影響要因について
+
+変数重要度分析（@fig-importance）から、以下の知見が得られた。
+
+1. **時間帯（hour）** が最も重要な変数であり、シェアサイクルの利用は通勤・通学の移動パターンに強く依存している
+2. **気温（temperature）** が2番目に重要であり、気象条件がシェアサイクルの利用判断に大きく影響する。先行研究 [@Eren2020] の知見とも一致する
+3. **降雨（is_rain）** は利用数を大きく減少させる要因であり、需要予測において重要な変数である
+
+### 先行研究との比較
+
+@Fanaee2014 が示したバイクシェアリングデータにおけるイベント検出の知見と同様に、気象条件と時間帯が利用パターンの主要な決定要因であることが確認された。また、@Singhvi2015 が報告した NYC Citi Bike の予測事例と比較しても、勾配ブースティング手法の有効性は同様の傾向を示している。

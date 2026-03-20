@@ -1,0 +1,405 @@
+---
+title: "東京都内シェアサイクル利用数の<br>予測モデル構築に関する研究"
+subtitle: "３年次専門演習 春学期"
+author: "東国 花子（26110001）"
+date: today
+date-format: "YYYY年MM月DD日"
+institute: "東京国際大学 商学部 データサイエンスコース"
+format:
+  revealjs:
+    theme: [default, css/custom.scss]
+    logo: css/icon/tiu.png
+    slide-number: true
+    show-slide-number: all
+    width: 1280
+    height: 720
+    transition: slide
+    lang: ja
+    code-fold: true
+    code-line-numbers: false
+    fig-align: center
+    smaller: true
+    mermaid:
+      theme: default
+    chalkboard: true
+    footer: "Hanako Tokoku @ Tokyo International University"
+bibliography: ref/references.bib
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+
+## 目次
+
+1. 研究の背景
+2. 研究の目的
+3. データの概要
+4. 利用数の時系列
+5. 気温と利用数の関係
+6. 曜日・時間帯パターン
+7. 分析手法の概要
+8. LightGBM の仕組み
+9. 分析パイプライン
+10. 精度比較
+11. 予測結果の可視化
+12. 変数重要度
+13. 考察
+14. まとめと今後の課題
+15. 参考文献
+
+::: {.notes}
+発表は約15分を想定しています。各スライドの説明は1分程度を目安にしてください。
+:::
+
+
+## 研究の背景
+
+:::{.incremental}
+- 都市部でシェアサイクルの利用が急速に拡大している
+- 環境負荷の低い移動手段として注目 [@Fishman2016]
+- 効率的な運営には**利用数の予測**が不可欠
+- 気象条件・曜日・時間帯が利用パターンに影響 [@Eren2020]
+- 東京都内に特化した予測モデルの構築事例は限られている
+:::
+
+::: {.notes}
+背景では、なぜこの研究テーマを選んだかを説明します。社会的な意義と学術的なギャップの両面から動機を述べましょう。
+:::
+
+
+## 研究の目的
+
+以下の3点を明らかにする
+
+. . .
+
+1. シェアサイクル利用数を**予測するモデル**を構築する
+
+. . .
+
+2. **線形回帰とLightGBM**の精度を比較する
+
+. . .
+
+3. 利用数に影響を与える**要因を特定**する
+
+
+## データの概要
+
+| 項目 | 内容 |
+|------|------|
+| 対象期間 | 2024年1月〜12月（365日間） |
+| 時間粒度 | 1時間単位 |
+| レコード数 | 8,760件 |
+| 目的変数 | 1時間あたりの利用数 |
+| 説明変数 | 気温、湿度、風速、降雨、曜日、時間帯 |
+
+::: {.notes}
+合成データを使用していることを補足説明しましょう。実際の研究では、データの出典と取得方法を詳しく説明します。
+:::
+
+
+## データの出典
+
+| 項目 | 内容 |
+|------|------|
+| 利用データ | 東京都シェアサイクル事業オープンデータ（※実際の出典に置き換えてください） |
+| 気象データ | 気象庁 過去の気象データ検索（※実際の出典に置き換えてください） |
+| 取得日 | 2025年○月○日 |
+| 前処理 | `src/generate_data.R` で実行 |
+
+::: {.notes}
+データの出典は具体的に記載しましょう。URL、取得日、ライセンス情報なども明記すると信頼性が高まります。
+:::
+
+```{r}
+#| label: slide-data-load
+
+pacman::p_load(tidyverse, plotly)
+
+bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
+  mutate(wday = wday(date, label = TRUE, locale = "C"))
+```
+
+
+## 利用数の時系列
+
+```{r}
+#| label: slide-timeseries
+
+daily_avg <- bike_data |>
+  group_by(date) |>
+  summarise(avg_count = mean(count), .groups = "drop")
+
+plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
+        line = list(color = "#2F5496", width = 1.5)) |>
+  layout(
+    xaxis = list(title = "日付"),
+    yaxis = list(title = "平均利用数（台/時間）"),
+    margin = list(t = 10)
+  )
+```
+
+
+## 気温と利用数
+
+:::: {.columns}
+
+::: {.column width="50%"}
+```{r}
+#| label: slide-temp-scatter
+
+sample_data <- bike_data |> slice_sample(n = 1500)
+
+plot_ly(sample_data, x = ~temperature, y = ~count,
+        type = "scatter", mode = "markers",
+        marker = list(color = "#2F5496", opacity = 0.3, size = 3)) |>
+  layout(
+    xaxis = list(title = "気温（°C）"),
+    yaxis = list(title = "利用数（台）"),
+    margin = list(t = 10)
+  )
+```
+:::
+
+::: {.column width="50%"}
+**気温と利用数の関係**
+
+- 気温が高いほど利用数が増加
+- 約20°C以上で利用数が安定
+- 低温時は利用が大幅に減少
+- 正の相関が認められる
+:::
+
+::::
+
+
+## 曜日・時間帯パターン
+
+```{r}
+#| label: slide-hourly
+
+hourly_avg <- bike_data |>
+  mutate(day_type = ifelse(is_weekend, "休日", "平日")) |>
+  group_by(hour, day_type) |>
+  summarise(avg_count = mean(count), .groups = "drop")
+
+plot_ly(hourly_avg, x = ~hour, y = ~avg_count, color = ~day_type,
+        type = "bar", colors = c("平日" = "#2F5496", "休日" = "#C55A11")) |>
+  layout(
+    barmode = "group",
+    xaxis = list(title = "時間帯", dtick = 1),
+    yaxis = list(title = "平均利用数（台）"),
+    margin = list(t = 10)
+  )
+```
+
+
+## 分析手法の概要
+
+| 手法 | 特徴 | 利点 | 欠点 |
+|------|------|------|------|
+| 線形回帰 | 線形モデル | 解釈が容易 | 非線形に弱い |
+| LightGBM | 勾配ブースティング | 高精度 | 解釈が複雑 |
+
+- ベースライン：**線形回帰** [@James2023]
+- 高精度手法：**LightGBM** [@Ke2017]
+- 評価指標：MAE / RMSE / R²
+
+
+## LightGBM の仕組み
+
+| ステップ | 処理内容 |
+|:---:|:---|
+| 1 | 初期予測 F₀ を設定 |
+| 2 | 残差（実測値 − 予測値）を計算 |
+| 3 | 残差を予測する決定木 f₁ を学習 |
+| 4 | 予測を更新：F₁ = F₀ + η·f₁ |
+| 5 | 再び残差を計算 |
+| 6 | 決定木 f₂ を学習 → F₂ = F₁ + η·f₂ |
+| ... | M 回繰り返し |
+| 最終 | **最終予測 F_M** を出力 |
+
+: 勾配ブースティングの反復手順（η は学習率）
+
+
+## 分析パイプライン
+
+| 順序 | 工程 | 詳細 |
+|:---:|:---|:---|
+| 1 | データ生成 | 合成データ（365日×24時間） |
+| 2 | 前処理 | 欠損値処理・特徴量作成 |
+| 3 | 分割 | 訓練 80% / テスト 20% |
+| 4a | 線形回帰 | ベースラインモデル |
+| 4b | LightGBM | 勾配ブースティングモデル |
+| 5 | 精度比較 | MAE / RMSE / R² |
+| 6 | 変数重要度 | Gain による評価 |
+
+
+## 精度比較
+
+```{r}
+#| label: slide-model-fit
+
+pacman::p_load(tidymodels, bonsai)
+
+model_data <- bike_data |>
+  mutate(
+    month = factor(month),
+    is_rain = factor(is_rain),
+    is_weekend = factor(is_weekend)
+  ) |>
+  select(-date, -wday)
+
+set.seed(123)
+split <- initial_split(model_data, prop = 0.8)
+train_data <- training(split)
+test_data  <- testing(split)
+
+bike_recipe <- recipe(count ~ ., data = train_data)
+
+lm_fit <- workflow() |>
+  add_recipe(bike_recipe) |>
+  add_model(linear_reg() |> set_engine("lm")) |>
+  fit(data = train_data)
+
+lgbm_fit <- workflow() |>
+  add_recipe(bike_recipe) |>
+  add_model(
+    boost_tree(trees = 500, tree_depth = 6, learn_rate = 0.1, min_n = 10) |>
+      set_engine("lightgbm") |> set_mode("regression")
+  ) |>
+  fit(data = train_data)
+
+lm_pred <- predict(lm_fit, test_data) |>
+  bind_cols(test_data |> select(count)) |>
+  rename(predicted = .pred, actual = count) |>
+  mutate(model = "線形回帰")
+
+lgbm_pred <- predict(lgbm_fit, test_data) |>
+  bind_cols(test_data |> select(count)) |>
+  rename(predicted = .pred, actual = count) |>
+  mutate(model = "LightGBM")
+
+all_pred <- bind_rows(lm_pred, lgbm_pred)
+```
+
+```{r}
+#| label: slide-accuracy-table
+
+metrics_fn <- metric_set(mae, rmse, rsq)
+
+accuracy_table <- all_pred |>
+  group_by(model) |>
+  metrics_fn(truth = actual, estimate = predicted) |>
+  select(model, .metric, .estimate) |>
+  pivot_wider(names_from = .metric, values_from = .estimate) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2))) |>
+  rename(モデル = model, MAE = mae, RMSE = rmse, `R²` = rsq)
+
+knitr::kable(accuracy_table)
+```
+
+**LightGBM が全指標で線形回帰を上回る**
+
+
+## 予測結果の可視化
+
+```{r}
+#| label: slide-pred-plot
+
+test_with_pred <- test_data |>
+  mutate(
+    pred_lm   = predict(lm_fit, test_data)$.pred,
+    pred_lgbm = predict(lgbm_fit, test_data)$.pred,
+    index = row_number()
+  ) |>
+  slice_head(n = 150)
+
+plot_ly(test_with_pred, x = ~index) |>
+  add_lines(y = ~count, name = "実測値",
+            line = list(color = "black", width = 1.5)) |>
+  add_lines(y = ~pred_lgbm, name = "LightGBM",
+            line = list(color = "#2F5496", width = 1.5, dash = "dot")) |>
+  add_lines(y = ~pred_lm, name = "線形回帰",
+            line = list(color = "#C55A11", width = 1.5, dash = "dash")) |>
+  layout(
+    xaxis = list(title = "テストデータ インデックス"),
+    yaxis = list(title = "利用数（台）"),
+    margin = list(t = 10),
+    legend = list(x = 0.02, y = 0.98)
+  )
+```
+
+
+## 変数重要度
+
+```{r}
+#| label: slide-importance
+
+importance <- lgbm_fit |>
+  extract_fit_engine() |>
+  lightgbm::lgb.importance() |>
+  as_tibble() |>
+  arrange(desc(Gain)) |>
+  mutate(Feature = fct_reorder(Feature, Gain))
+
+plot_ly(importance, x = ~Gain, y = ~Feature, type = "bar",
+        orientation = "h",
+        marker = list(color = "#2F5496")) |>
+  layout(
+    xaxis = list(title = "重要度（Gain）"),
+    yaxis = list(title = "", categoryorder = "total ascending"),
+    margin = list(l = 100, t = 10)
+  )
+```
+
+
+## 考察
+
+:::{.incremental}
+- **LightGBM** は線形回帰より全指標で高精度
+  - 非線形な利用パターンの捕捉に有効
+- **時間帯**が最も重要な予測変数
+  - 通勤・通学の移動パターンを反映
+- **気温**が2番目に重要
+  - 先行研究 [@Eren2020] の知見と一致
+- **降雨**は利用数を大幅に減少させる
+  - 需要予測で重要なファクター
+:::
+
+
+## まとめと今後の課題
+
+:::: {.columns}
+
+::: {.column width="50%"}
+**研究成果**
+
+- LightGBM による利用数予測モデルを構築
+- 線形回帰比で RMSE 約30%改善
+- 時間帯・気温が最重要変数
+:::
+
+::: {.column width="50%"}
+**今後の課題**
+
+- 実データでの検証
+- ステーション別予測
+- 深層学習との比較
+- リアルタイム予測への拡張
+:::
+
+::::
+
+::: {.notes}
+まとめでは研究の主要な成果を簡潔に振り返り、今後の研究の方向性を示します。質疑応答に備えて、限界点についても把握しておきましょう。
+:::
+
+
+## 参考文献
+
+::: {#refs}
+:::
