@@ -1,4 +1,4 @@
-.PHONY: preview render clean preview-slides render-slides render-all
+.PHONY: preview render clean preview-slides render-slides render-all cache-refresh
 
 preview:
 	quarto preview &
@@ -11,10 +11,9 @@ preview-slides:
 	quarto preview a1_発表資料.qmd &
 
 render-slides:
-	rm -rf a1_発表資料_files .quarto/a1_発表資料
-	quarto render a1_発表資料.qmd --cache-refresh
+	quarto render a1_発表資料.qmd
 	npx decktape reveal a1_発表資料.html a1_発表資料.pdf --size 1280x720 --chrome-arg=--no-sandbox
-	quarto render a1_発表資料.qmd --to pptx
+	quarto render a1_発表資料.qmd --to pptx --cache-refresh
 	cp a1_発表資料.html docs/
 	cp a1_発表資料.pdf docs/
 	cp a1_発表資料.pptx docs/
@@ -24,5 +23,9 @@ render-slides:
 
 render-all: render
 
+cache-refresh:
+	rm -rf a1_発表資料_cache
+	quarto render a1_発表資料.qmd --cache-refresh
+
 clean:
-	rm -rf docs .quarto a1_発表資料.html a1_発表資料.pdf a1_発表資料.pptx a1_発表資料_files
+	rm -rf docs .quarto a1_発表資料.html a1_発表資料.pdf a1_発表資料.pptx a1_発表資料_files a1_発表資料_cache

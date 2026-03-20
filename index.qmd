@@ -3,16 +3,6 @@ title: "目次"
 number-sections: false
 ---
 
-```{=html}
-<style>
-#quarto-document-content h1,
-#quarto-document-content h2 {
-  border-bottom: none !important;
-  padding-bottom: 0 !important;
-}
-</style>
-```
-
 # 第1章　研究概要
 
 - [研究概要](01_研究概要.html)

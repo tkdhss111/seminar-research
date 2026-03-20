@@ -1,7 +1,7 @@
 ---
 title: "東京都内シェアサイクル利用数の<br>予測モデル構築に関する研究"
 subtitle: "３年次専門演習 春学期"
-author: "東国 花子（26110001）"
+author: "東国 花子"
 date: today
 date-format: "YYYY年MM月DD日"
 institute: "東京国際大学 商学部 データサイエンスコース"
@@ -28,6 +28,7 @@ execute:
   echo: false
   warning: false
   message: false
+  cache: false
 ---
 
 

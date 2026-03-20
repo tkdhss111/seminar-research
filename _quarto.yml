@@ -1,12 +1,13 @@
 project:
   type: book
   output-dir: docs
-  post-render:
-    - python3 post-render.py
+  resources:
+    - ref/
+    - css/
 
 book:
   title: "東京都内シェアサイクル利用数の予測モデル構築に関する研究"
-  author: "東京国際大学 商学部 <br>データサイエンスコース<br>26110001　東国 花子"
+  author: "東京国際大学 商学部 <br>データサイエンスコース<br>東国 花子"
   date: today
   chapters:
     - index.qmd
