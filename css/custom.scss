@@ -5,10 +5,10 @@ $presentation-heading-color: #2c3e50;
 $body-color: #333;
 $link-color: #3498db;
 $code-block-bg: #f8f9fa;
-$presentation-font-size-root: 36px;
+$presentation-font-size-root: 46px;
 $presentation-h1-font-size: 1.5em;
-$presentation-h2-font-size: 1.5em;
-$presentation-h3-font-size: 1.2em;
+$presentation-h2-font-size: 1.2em;
+$presentation-h3-font-size: 1.0em;
 
 /*-- scss:rules --*/
 
@@ -33,7 +33,7 @@ $presentation-h3-font-size: 1.2em;
   padding-bottom: 0.2em;
   margin-top: 0;
   margin-bottom: 0.4em;
-  font-size: 1.4em;
+  font-size: 1.0em;
 }
 
 .reveal section h3 {
@@ -114,6 +114,7 @@ $presentation-h3-font-size: 1.2em;
 /* ===== フッター・ページ番号（フルスクリーンで切れないよう余白確保） ===== */
 .reveal .footer {
   font-size: 0.45em;
+  font-family: "UD Digi Kyokasho NK-R", "UD デジタル 教科書体 NK-R", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
   bottom: 0.5em !important;
   z-index: 10;
 }
@@ -130,6 +131,11 @@ $presentation-h3-font-size: 1.2em;
 
 .center h2 {
   text-align: center;
+}
+
+/* ===== タイトルページ: サブタイトル ===== */
+#title-slide .subtitle {
+  font-size: 1.3em;
 }
 
 /* ===== タイトルページ: 日本語慣例（所属 → 氏名） ===== */

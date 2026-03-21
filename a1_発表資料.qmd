@@ -1,6 +1,6 @@
 ---
 title: "東京都内シェアサイクル利用数の<br>予測モデル構築に関する研究"
-subtitle: "３年次専門演習 春学期"
+subtitle: "専門演習 テーマ研究"
 author: "東国 花子"
 date: today
 date-format: "YYYY年MM月DD日"
@@ -22,7 +22,7 @@ format:
     mermaid:
       theme: default
     chalkboard: true
-    footer: "Hanako Tokoku @ Tokyo International University"
+    footer: "Hanako Tokoku @ Tokyo Int'l Univ."
 bibliography: ref/references.bib
 execute:
   echo: false
@@ -120,6 +120,9 @@ execute:
 
 pacman::p_load(tidyverse, plotly)
 
+# plotly の軸ラベル等を大きく表示
+plotly_font <- list(size = 16)
+
 bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
   mutate(wday = wday(date, label = TRUE, locale = "C"))
 ```
@@ -139,7 +142,8 @@ plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
   layout(
     xaxis = list(title = "日付"),
     yaxis = list(title = "平均利用数（台/時間）"),
-    margin = list(t = 10)
+    margin = list(t = 10),
+    font = plotly_font
   )
 ```
 
@@ -160,7 +164,8 @@ plot_ly(sample_data, x = ~temperature, y = ~count,
   layout(
     xaxis = list(title = "気温（°C）"),
     yaxis = list(title = "利用数（台）"),
-    margin = list(t = 10)
+    margin = list(t = 10),
+    font = plotly_font
   )
 ```
 :::
@@ -193,7 +198,8 @@ plot_ly(hourly_avg, x = ~hour, y = ~avg_count, color = ~day_type,
     barmode = "group",
     xaxis = list(title = "時間帯", dtick = 1),
     yaxis = list(title = "平均利用数（台）"),
-    margin = list(t = 10)
+    margin = list(t = 10),
+    font = plotly_font
   )
 ```
 
@@ -330,7 +336,8 @@ plot_ly(test_with_pred, x = ~index) |>
     xaxis = list(title = "テストデータ インデックス"),
     yaxis = list(title = "利用数（台）"),
     margin = list(t = 10),
-    legend = list(x = 0.02, y = 0.98)
+    legend = list(x = 0.02, y = 0.98),
+    font = plotly_font
   )
 ```
 
@@ -353,7 +360,8 @@ plot_ly(importance, x = ~Gain, y = ~Feature, type = "bar",
   layout(
     xaxis = list(title = "重要度（Gain）"),
     yaxis = list(title = "", categoryorder = "total ascending"),
-    margin = list(l = 100, t = 10)
+    margin = list(l = 100, t = 10),
+    font = plotly_font
   )
 ```
 
