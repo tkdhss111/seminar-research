@@ -21,7 +21,6 @@ format:
     smaller: true
     mermaid:
       theme: default
-    chalkboard: true
     footer: "Hanako Tokoku @ Tokyo Int'l Univ."
 bibliography: ref/references.bib
 execute:
@@ -41,7 +40,7 @@ execute:
 5. 気温と利用数の関係
 6. 曜日・時間帯パターン
 7. 分析手法の概要
-8. LightGBM の仕組み
+8. 回帰木の仕組み
 9. 分析パイプライン
 10. 精度比較
 11. 予測結果の可視化
@@ -80,7 +79,7 @@ execute:
 
 . . .
 
-2. **線形回帰とLightGBM**の精度を比較する
+2. **線形回帰と回帰木**の精度を比較する
 
 . . .
 
@@ -118,13 +117,10 @@ execute:
 ```{r}
 #| label: slide-data-load
 
-pacman::p_load(tidyverse, plotly)
-
-# plotly の軸ラベル等を大きく表示
-plotly_font <- list(size = 16)
-
-bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
-  mutate(wday = wday(date, label = TRUE, locale = "C"))
+bike_data <- read.csv("data/bike_data.csv")
+bike_data$date <- as.Date(bike_data$date)
+bike_data$wday <- factor(bike_data$wday,
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 ```
 
 
@@ -133,18 +129,11 @@ bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
 ```{r}
 #| label: slide-timeseries
 
-daily_avg <- bike_data |>
-  group_by(date) |>
-  summarise(avg_count = mean(count), .groups = "drop")
+daily_avg <- aggregate(count ~ date, data = bike_data, FUN = mean)
 
-plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
-        line = list(color = "#2F5496", width = 1.5)) |>
-  layout(
-    xaxis = list(title = "日付"),
-    yaxis = list(title = "平均利用数（台/時間）"),
-    margin = list(t = 10),
-    font = plotly_font
-  )
+plot(daily_avg$date, daily_avg$count, type = "l", col = "#2F5496", lwd = 1.5,
+     xlab = "日付", ylab = "平均利用数（台/時間）",
+     cex.lab = 1.3, cex.axis = 1.1)
 ```
 
 
@@ -156,17 +145,14 @@ plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
 ```{r}
 #| label: slide-temp-scatter
 
-sample_data <- bike_data |> slice_sample(n = 1500)
+set.seed(42)
+idx <- sample(nrow(bike_data), 1500)
+sample_data <- bike_data[idx, ]
 
-plot_ly(sample_data, x = ~temperature, y = ~count,
-        type = "scatter", mode = "markers",
-        marker = list(color = "#2F5496", opacity = 0.3, size = 3)) |>
-  layout(
-    xaxis = list(title = "気温（°C）"),
-    yaxis = list(title = "利用数（台）"),
-    margin = list(t = 10),
-    font = plotly_font
-  )
+plot(sample_data$temperature, sample_data$count,
+     pch = 16, col = adjustcolor("#2F5496", 0.3), cex = 0.5,
+     xlab = "気温（°C）", ylab = "利用数（台）",
+     cex.lab = 1.3, cex.axis = 1.1)
 ```
 :::
 
@@ -187,20 +173,18 @@ plot_ly(sample_data, x = ~temperature, y = ~count,
 ```{r}
 #| label: slide-hourly
 
-hourly_avg <- bike_data |>
-  mutate(day_type = ifelse(is_weekend, "休日", "平日")) |>
-  group_by(hour, day_type) |>
-  summarise(avg_count = mean(count), .groups = "drop")
+hourly_avg_wd <- aggregate(count ~ hour,
+  data = bike_data[!bike_data$is_weekend, ], FUN = mean)
+hourly_avg_we <- aggregate(count ~ hour,
+  data = bike_data[bike_data$is_weekend == TRUE, ], FUN = mean)
 
-plot_ly(hourly_avg, x = ~hour, y = ~avg_count, color = ~day_type,
-        type = "bar", colors = c("平日" = "#2F5496", "休日" = "#C55A11")) |>
-  layout(
-    barmode = "group",
-    xaxis = list(title = "時間帯", dtick = 1),
-    yaxis = list(title = "平均利用数（台）"),
-    margin = list(t = 10),
-    font = plotly_font
-  )
+barplot(rbind(hourly_avg_wd$count, hourly_avg_we$count),
+        beside = TRUE, names.arg = 0:23,
+        col = c("#2F5496", "#C55A11"),
+        xlab = "時間帯", ylab = "平均利用数（台）",
+        cex.lab = 1.3, cex.axis = 1.1, cex.names = 0.9)
+legend("topleft", legend = c("平日", "休日"),
+       fill = c("#2F5496", "#C55A11"), cex = 1.1)
 ```
 
 
@@ -209,40 +193,39 @@ plot_ly(hourly_avg, x = ~hour, y = ~avg_count, color = ~day_type,
 | 手法 | 特徴 | 利点 | 欠点 |
 |------|------|------|------|
 | 線形回帰 | 線形モデル | 解釈が容易 | 非線形に弱い |
-| LightGBM | 勾配ブースティング | 高精度 | 解釈が複雑 |
+| 回帰木 | 決定木ベースの再帰分割 | 非線形対応 | 過学習リスク |
 
 - ベースライン：**線形回帰** [@James2023]
-- 高精度手法：**LightGBM** [@Ke2017]
+- 非線形手法：**回帰木（rpart）** [@James2023]
 - 評価指標：MAE / RMSE / R²
 
 
-## LightGBM の仕組み
+## 回帰木の仕組み
 
 | ステップ | 処理内容 |
 |:---:|:---|
-| 1 | 初期予測 F₀ を設定 |
-| 2 | 残差（実測値 − 予測値）を計算 |
-| 3 | 残差を予測する決定木 f₁ を学習 |
-| 4 | 予測を更新：F₁ = F₀ + η·f₁ |
-| 5 | 再び残差を計算 |
-| 6 | 決定木 f₂ を学習 → F₂ = F₁ + η·f₂ |
-| ... | M 回繰り返し |
-| 最終 | **最終予測 F_M** を出力 |
+| 1 | 全データを1つのノードに配置 |
+| 2 | 残差二乗和（RSS）を最小化する分割点を探索 |
+| 3 | データを2つの領域に分割 |
+| 4 | 各領域で再帰的に分割を繰り返す |
+| 5 | 停止条件（最大深さ等）で分割を終了 |
+| 6 | コスト複雑度剪定で過学習を防止 |
+| 最終 | **各終端ノードの平均値** で予測 |
 
-: 勾配ブースティングの反復手順（η は学習率）
+: 回帰木の構築手順
 
 
 ## 分析パイプライン
 
 | 順序 | 工程 | 詳細 |
 |:---:|:---|:---|
-| 1 | データ生成 | 合成データ（365日×24時間） |
-| 2 | 前処理 | 欠損値処理・特徴量作成 |
+| 1 | データ読込 | 合成データ（365日×24時間） |
+| 2 | 前処理 | factor変換・特徴量作成 |
 | 3 | 分割 | 訓練 80% / テスト 20% |
-| 4a | 線形回帰 | ベースラインモデル |
-| 4b | LightGBM | 勾配ブースティングモデル |
+| 4a | 線形回帰 | ベースラインモデル（`lm`） |
+| 4b | 回帰木 | 非線形モデル（`rpart`） |
 | 5 | 精度比較 | MAE / RMSE / R² |
-| 6 | 変数重要度 | Gain による評価 |
+| 6 | 変数重要度 | rpart の重要度スコア |
 
 
 ## 精度比較
@@ -250,66 +233,48 @@ plot_ly(hourly_avg, x = ~hour, y = ~avg_count, color = ~day_type,
 ```{r}
 #| label: slide-model-fit
 
-pacman::p_load(tidymodels, bonsai)
-
-model_data <- bike_data |>
-  mutate(
-    month = factor(month),
-    is_rain = factor(is_rain),
-    is_weekend = factor(is_weekend)
-  ) |>
-  select(-date, -wday)
+# --- モデリング用データ ---
+model_data <- bike_data[, !names(bike_data) %in% c("date", "wday")]
+model_data$month      <- factor(model_data$month)
+model_data$is_rain    <- factor(model_data$is_rain)
+model_data$is_weekend <- factor(model_data$is_weekend)
 
 set.seed(123)
-split <- initial_split(model_data, prop = 0.8)
-train_data <- training(split)
-test_data  <- testing(split)
+n <- nrow(model_data)
+train_idx  <- sample(n, floor(0.8 * n))
+train_data <- model_data[train_idx, ]
+test_data  <- model_data[-train_idx, ]
 
-bike_recipe <- recipe(count ~ ., data = train_data)
+lm_fit    <- lm(count ~ ., data = train_data)
+lm_pred   <- predict(lm_fit, newdata = test_data)
 
-lm_fit <- workflow() |>
-  add_recipe(bike_recipe) |>
-  add_model(linear_reg() |> set_engine("lm")) |>
-  fit(data = train_data)
+library(rpart)
+tree_fit  <- rpart(count ~ ., data = train_data,
+                   control = rpart.control(maxdepth = 8, minsplit = 20))
+tree_pred <- predict(tree_fit, newdata = test_data)
 
-lgbm_fit <- workflow() |>
-  add_recipe(bike_recipe) |>
-  add_model(
-    boost_tree(trees = 500, tree_depth = 6, learn_rate = 0.1, min_n = 10) |>
-      set_engine("lightgbm") |> set_mode("regression")
-  ) |>
-  fit(data = train_data)
+actual <- test_data$count
 
-lm_pred <- predict(lm_fit, test_data) |>
-  bind_cols(test_data |> select(count)) |>
-  rename(predicted = .pred, actual = count) |>
-  mutate(model = "線形回帰")
-
-lgbm_pred <- predict(lgbm_fit, test_data) |>
-  bind_cols(test_data |> select(count)) |>
-  rename(predicted = .pred, actual = count) |>
-  mutate(model = "LightGBM")
-
-all_pred <- bind_rows(lm_pred, lgbm_pred)
+calc_mae  <- function(a, p) round(mean(abs(a - p)), 2)
+calc_rmse <- function(a, p) round(sqrt(mean((a - p)^2)), 2)
+calc_rsq  <- function(a, p) round(1 - sum((a - p)^2) / sum((a - mean(a))^2), 2)
 ```
 
 ```{r}
 #| label: slide-accuracy-table
 
-metrics_fn <- metric_set(mae, rmse, rsq)
-
-accuracy_table <- all_pred |>
-  group_by(model) |>
-  metrics_fn(truth = actual, estimate = predicted) |>
-  select(model, .metric, .estimate) |>
-  pivot_wider(names_from = .metric, values_from = .estimate) |>
-  mutate(across(where(is.numeric), \(x) round(x, 2))) |>
-  rename(モデル = model, MAE = mae, RMSE = rmse, `R²` = rsq)
+accuracy_table <- data.frame(
+  モデル = c("線形回帰", "回帰木（rpart）"),
+  MAE  = c(calc_mae(actual, lm_pred),  calc_mae(actual, tree_pred)),
+  RMSE = c(calc_rmse(actual, lm_pred), calc_rmse(actual, tree_pred)),
+  R2   = c(calc_rsq(actual, lm_pred),  calc_rsq(actual, tree_pred))
+)
+names(accuracy_table)[4] <- "R\u00b2"
 
 knitr::kable(accuracy_table)
 ```
 
-**LightGBM が全指標で線形回帰を上回る**
+**回帰木が全指標で線形回帰を上回る**
 
 
 ## 予測結果の可視化
@@ -317,28 +282,19 @@ knitr::kable(accuracy_table)
 ```{r}
 #| label: slide-pred-plot
 
-test_with_pred <- test_data |>
-  mutate(
-    pred_lm   = predict(lm_fit, test_data)$.pred,
-    pred_lgbm = predict(lgbm_fit, test_data)$.pred,
-    index = row_number()
-  ) |>
-  slice_head(n = 150)
+n_plot <- 150
+idx <- seq_len(n_plot)
 
-plot_ly(test_with_pred, x = ~index) |>
-  add_lines(y = ~count, name = "実測値",
-            line = list(color = "black", width = 1.5)) |>
-  add_lines(y = ~pred_lgbm, name = "LightGBM",
-            line = list(color = "#2F5496", width = 1.5, dash = "dot")) |>
-  add_lines(y = ~pred_lm, name = "線形回帰",
-            line = list(color = "#C55A11", width = 1.5, dash = "dash")) |>
-  layout(
-    xaxis = list(title = "テストデータ インデックス"),
-    yaxis = list(title = "利用数（台）"),
-    margin = list(t = 10),
-    legend = list(x = 0.02, y = 0.98),
-    font = plotly_font
-  )
+plot(idx, actual[idx], type = "l", col = "black", lwd = 1.5,
+     xlab = "テストデータ インデックス", ylab = "利用数（台）",
+     ylim = range(c(actual[idx], lm_pred[idx], tree_pred[idx])),
+     cex.lab = 1.3, cex.axis = 1.1)
+lines(idx, tree_pred[idx], col = "#2F5496", lwd = 1.5, lty = 3)
+lines(idx, lm_pred[idx],  col = "#C55A11", lwd = 1.5, lty = 2)
+legend("topright",
+       legend = c("実測値", "回帰木", "線形回帰"),
+       col = c("black", "#2F5496", "#C55A11"),
+       lty = c(1, 3, 2), lwd = 1.5, cex = 1.1)
 ```
 
 
@@ -347,29 +303,19 @@ plot_ly(test_with_pred, x = ~index) |>
 ```{r}
 #| label: slide-importance
 
-importance <- lgbm_fit |>
-  extract_fit_engine() |>
-  lightgbm::lgb.importance() |>
-  as_tibble() |>
-  arrange(desc(Gain)) |>
-  mutate(Feature = fct_reorder(Feature, Gain))
+imp <- tree_fit$variable.importance
+imp <- sort(imp)
 
-plot_ly(importance, x = ~Gain, y = ~Feature, type = "bar",
-        orientation = "h",
-        marker = list(color = "#2F5496")) |>
-  layout(
-    xaxis = list(title = "重要度（Gain）"),
-    yaxis = list(title = "", categoryorder = "total ascending"),
-    margin = list(l = 100, t = 10),
-    font = plotly_font
-  )
+par(mar = c(5, 8, 2, 2))
+barplot(imp, horiz = TRUE, las = 1, col = "#2F5496",
+        xlab = "重要度", cex.lab = 1.3, cex.axis = 1.1, cex.names = 1.1)
 ```
 
 
 ## 考察
 
 :::{.incremental}
-- **LightGBM** は線形回帰より全指標で高精度
+- **回帰木** は線形回帰より全指標で高精度
   - 非線形な利用パターンの捕捉に有効
 - **時間帯**が最も重要な予測変数
   - 通勤・通学の移動パターンを反映
@@ -387,8 +333,8 @@ plot_ly(importance, x = ~Gain, y = ~Feature, type = "bar",
 ::: {.column width="50%"}
 **研究成果**
 
-- LightGBM による利用数予測モデルを構築
-- 線形回帰比で RMSE 約30%改善
+- 回帰木による利用数予測モデルを構築
+- 線形回帰比で全精度指標が改善
 - 時間帯・気温が最重要変数
 :::
 
@@ -397,7 +343,7 @@ plot_ly(importance, x = ~Gain, y = ~Feature, type = "bar",
 
 - 実データでの検証
 - ステーション別予測
-- 深層学習との比較
+- ランダムフォレスト等との比較
 - リアルタイム予測への拡張
 :::
 

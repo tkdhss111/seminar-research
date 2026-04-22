@@ -11,21 +11,11 @@ book:
   date: today
   chapters:
     - index.qmd
-    - part: "第1章　研究概要"
-      chapters:
-        - 01_研究概要.qmd
-    - part: "第2章　データ"
-      chapters:
-        - 02_データ.qmd
-    - part: "第3章　分析手法"
-      chapters:
-        - 03_分析手法.qmd
-    - part: "第4章　結果と考察"
-      chapters:
-        - 04_結果と考察.qmd
-    - part: "第5章　まとめ"
-      chapters:
-        - 05_まとめ.qmd
+    - 01_研究概要.qmd
+    - 02_データ.qmd
+    - 03_分析手法.qmd
+    - 04_結果と考察.qmd
+    - 05_まとめ.qmd
 
 bibliography: ref/references.bib
 

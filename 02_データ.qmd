@@ -38,12 +38,12 @@ title: "データ"
 
 ```{r}
 #| label: setup-data
-#| code-summary: "パッケージ読み込みとデータ読み込み"
+#| code-summary: "データ読み込み"
 
-pacman::p_load(tidyverse, plotly)
-
-bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
-  mutate(wday = wday(date, label = TRUE, locale = "C"))
+bike_data <- read.csv("data/bike_data.csv")
+bike_data$date <- as.Date(bike_data$date)
+bike_data$wday <- factor(bike_data$wday,
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 ```
 
 
@@ -83,19 +83,19 @@ bike_data <- read_csv("data/bike_data.csv", show_col_types = FALSE) |>
 #| tbl-cap: "基本統計量"
 #| code-summary: "基本統計量の算出"
 
-bike_data |>
-  select(temperature, humidity, wind_speed, count) |>
-  pivot_longer(everything(), names_to = "variable", values_to = "value") |>
-  group_by(variable) |>
-  summarise(
-    平均 = round(mean(value), 1),
-    標準偏差 = round(sd(value), 1),
-    最小 = round(min(value), 1),
-    中央値 = round(median(value), 1),
-    最大 = round(max(value), 1),
-    .groups = "drop"
-  ) |>
-  knitr::kable()
+vars <- c("temperature", "humidity", "wind_speed", "count")
+stats <- do.call(rbind, lapply(vars, function(v) {
+  x <- bike_data[[v]]
+  data.frame(
+    変数 = v,
+    平均 = round(mean(x), 1),
+    標準偏差 = round(sd(x), 1),
+    最小 = round(min(x), 1),
+    中央値 = round(median(x), 1),
+    最大 = round(max(x), 1)
+  )
+}))
+knitr::kable(stats, row.names = FALSE)
 ```
 
 
@@ -108,17 +108,10 @@ bike_data |>
 #| fig-cap: "日別平均利用数の推移"
 #| code-summary: "時系列グラフの作成"
 
-daily_avg <- bike_data |>
-  group_by(date) |>
-  summarise(avg_count = mean(count), .groups = "drop")
+daily_avg <- aggregate(count ~ date, data = bike_data, FUN = mean)
 
-plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
-        line = list(color = "#2F5496", width = 1)) |>
-  layout(
-    xaxis = list(title = "日付"),
-    yaxis = list(title = "平均利用数（台/時間）"),
-    margin = list(t = 20)
-  )
+plot(daily_avg$date, daily_avg$count, type = "l", col = "#2F5496",
+     xlab = "日付", ylab = "平均利用数（台/時間）", lwd = 1.5)
 ```
 
 
@@ -131,15 +124,13 @@ plot_ly(daily_avg, x = ~date, y = ~avg_count, type = "scatter", mode = "lines",
 #| fig-cap: "気温と利用数の関係"
 #| code-summary: "散布図の作成"
 
-sample_data <- bike_data |> slice_sample(n = 2000)
+set.seed(42)
+idx <- sample(nrow(bike_data), 2000)
+sample_data <- bike_data[idx, ]
 
-plot_ly(sample_data, x = ~temperature, y = ~count, type = "scatter", mode = "markers",
-        marker = list(color = "#2F5496", opacity = 0.3, size = 4)) |>
-  layout(
-    xaxis = list(title = "気温（°C）"),
-    yaxis = list(title = "利用数（台）"),
-    margin = list(t = 20)
-  )
+plot(sample_data$temperature, sample_data$count,
+     pch = 16, col = adjustcolor("#2F5496", 0.3), cex = 0.6,
+     xlab = "気温（°C）", ylab = "利用数（台）")
 ```
 
 
@@ -154,17 +145,11 @@ plot_ly(sample_data, x = ~temperature, y = ~count, type = "scatter", mode = "mar
 #| fig-cap: "時間帯別の平均利用数"
 #| code-summary: "時間帯別集計"
 
-hourly_avg <- bike_data |>
-  group_by(hour) |>
-  summarise(avg_count = mean(count), .groups = "drop")
+hourly_avg <- aggregate(count ~ hour, data = bike_data, FUN = mean)
 
-plot_ly(hourly_avg, x = ~hour, y = ~avg_count, type = "bar",
-        marker = list(color = "#2F5496")) |>
-  layout(
-    xaxis = list(title = "時間帯", dtick = 1),
-    yaxis = list(title = "平均利用数（台）"),
-    margin = list(t = 20)
-  )
+barplot(hourly_avg$count, names.arg = hourly_avg$hour,
+        col = "#2F5496", xlab = "時間帯", ylab = "平均利用数（台）",
+        las = 1)
 ```
 
 ### 曜日別
@@ -174,17 +159,11 @@ plot_ly(hourly_avg, x = ~hour, y = ~avg_count, type = "bar",
 #| fig-cap: "曜日別の平均利用数"
 #| code-summary: "曜日別集計"
 
-wday_avg <- bike_data |>
-  group_by(wday) |>
-  summarise(avg_count = mean(count), .groups = "drop")
+wday_avg <- aggregate(count ~ wday, data = bike_data, FUN = mean)
 
-plot_ly(wday_avg, x = ~wday, y = ~avg_count, type = "bar",
-        marker = list(color = "#4472C4")) |>
-  layout(
-    xaxis = list(title = "曜日"),
-    yaxis = list(title = "平均利用数（台）"),
-    margin = list(t = 20)
-  )
+barplot(wday_avg$count, names.arg = wday_avg$wday,
+        col = "#4472C4", xlab = "曜日", ylab = "平均利用数（台）",
+        las = 1)
 ```
 
 :::

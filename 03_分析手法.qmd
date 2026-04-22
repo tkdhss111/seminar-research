@@ -22,12 +22,12 @@ title: "分析手法"
 
 ## 手法の選定
 
-本研究では、以下の2手法を比較する。ベースラインとして線形回帰を用い、高精度な予測手法として勾配ブースティングの一種である LightGBM [@Ke2017] を採用する。
+本研究では、以下の2手法を比較する。ベースラインとして線形回帰を用い、非線形な関係を捉える手法として回帰木（rpart）[@James2023] を採用する。
 
 | 手法 | 特徴 | 利点 | 欠点 |
 |------|------|------|------|
 | 線形回帰 | 線形モデル | 解釈が容易、計算が高速 | 非線形関係を捉えにくい |
-| LightGBM | 勾配ブースティング決定木 | 高精度、非線形対応 | 過学習リスク、解釈が複雑 |
+| 回帰木（rpart） | 決定木ベースの再帰分割 | 非線形対応、解釈が視覚的 | 過学習リスク、不安定性 |
 
 : 手法の比較 {#tbl-method-comparison}
 
@@ -43,23 +43,19 @@ $$ {#eq-linear}
 ここで $\beta_0$ は切片、$\beta_1, \ldots, \beta_p$ は回帰係数、$\varepsilon$ は誤差項である [@James2023]。
 
 
-## LightGBM
+## 回帰木（rpart）
 
-LightGBM は、勾配ブースティング決定木（GBDT）の高速な実装である [@Ke2017]。複数の弱学習器（決定木）を逐次的に構築し、残差を学習することで高い予測精度を実現する。
+回帰木は、説明変数の空間を再帰的に分割し、各領域ごとに目的変数の平均値を予測するノンパラメトリック手法である [@James2023]。R の `rpart` パッケージはR に標準搭載されており、追加インストール不要で利用できる。
 
-### 勾配ブースティングの概要
+### 分割の基準
 
-勾配ブースティングでは、$M$ 本の決定木 $f_m$ を逐次的に加えることで予測関数 $F$ を構築する。
-
-$$
-F_M(\mathbf{x}) = F_0(\mathbf{x}) + \sum_{m=1}^{M} \eta \cdot f_m(\mathbf{x})
-$$ {#eq-gbdt}
-
-ここで $\eta$ は学習率（learning rate）であり、各ステップの寄与を制御する。各ステップ $m$ では、損失関数 $L$ の負の勾配（擬似残差）に対して決定木 $f_m$ を適合させる。
+各ノードにおいて、残差二乗和（RSS）を最小化する分割点を探索する。
 
 $$
-r_{im} = -\frac{\partial L(y_i, F_{m-1}(\mathbf{x}_i))}{\partial F_{m-1}(\mathbf{x}_i)}
-$$ {#eq-pseudo-residual}
+\text{RSS} = \sum_{x_i \in R_1} (y_i - \hat{y}_{R_1})^2 + \sum_{x_i \in R_2} (y_i - \hat{y}_{R_2})^2
+$$ {#eq-rss-split}
+
+ここで $R_1, R_2$ は分割後の2つの領域、$\hat{y}_{R_k}$ は各領域内の目的変数の平均値である。
 
 ### 決定木の構造
 
@@ -75,13 +71,15 @@ flowchart TD
     C -->|No| G["予測: 55台"]
 ```
 
-### LightGBM の特徴
+### 剪定（Pruning）
 
-LightGBM は以下の工夫により高速化を実現している。
+回帰木は深くなるほど訓練データに過学習する。これを防ぐため、コスト複雑度剪定（cost-complexity pruning）を行う。
 
-1. **Gradient-based One-Side Sampling (GOSS):** 勾配の大きいサンプルを重点的に使用
-2. **Exclusive Feature Bundling (EFB):** 相互排他的な特徴量をまとめて計算量を削減
-3. **Leaf-wise (Best-first) 成長:** Level-wise よりも効率的な木の成長戦略
+$$
+\text{Cost} = \text{RSS} + \alpha \cdot |T|
+$$ {#eq-cost-complexity}
+
+ここで $|T|$ は木の終端ノード数、$\alpha$ は複雑度パラメータ（`cp`）である。$\alpha$ が大きいほど単純な木が選ばれる。
 
 
 ## 説明変数の設計
@@ -105,11 +103,11 @@ LightGBM は以下の工夫により高速化を実現している。
 %%| label: fig-pipeline
 %%| fig-cap: "分析パイプライン"
 flowchart LR
-    A[データ生成] --> B[前処理<br>recipe]
+    A[データ読込] --> B[前処理<br>factor変換]
     B --> C[訓練/テスト分割<br>80:20]
     C --> D[モデル学習]
-    D --> E1[線形回帰]
-    D --> E2[LightGBM]
+    D --> E1[線形回帰<br>lm]
+    D --> E2[回帰木<br>rpart]
     E1 --> F[精度評価<br>MAE/RMSE/R²]
     E2 --> F
     F --> G[変数重要度<br>分析]
@@ -141,3 +139,49 @@ $$ {#eq-r2}
 ここで $y_i$ は実測値、$\hat{y}_i$ は予測値、$\bar{y}$ は実測値の平均、$n$ はサンプル数である。
 
 @eq-mae は外れ値に頑健な指標、@eq-rmse は大きな誤差をより重く評価する指標、@eq-r2 はモデルの説明力を0〜1で表す指標である。
+
+
+## 追加パッケージの利用（発展）
+
+本テンプレートはR の基本パッケージのみで動作するが、研究の目的に応じてより高度なパッケージを導入できる。
+
+::: {.callout-important title="パッケージの追加手順"}
+1. **R コンソール**で `install.packages("パッケージ名")` を実行（初回のみ）
+2. `.qmd` ファイルのコードブロック内で `library(パッケージ名)` を記述
+3. `quarto render` で正常にビルドできることを確認
+:::
+
+### 代表的な追加パッケージ
+
+| パッケージ | 用途 | インストール |
+|:---|:---|:---|
+| `tidyverse` | データ操作・可視化の統合環境 | `install.packages("tidyverse")` |
+| `randomForest` | ランダムフォレスト | `install.packages("randomForest")` |
+| `lightgbm` | 勾配ブースティング（LightGBM） | `install.packages("lightgbm")` |
+| `plotly` | インタラクティブなグラフ | `install.packages("plotly")` |
+
+### 使用例：LightGBM で回帰木を置き換える場合
+
+```r
+# 1. インストール（R コンソールで一度だけ実行）
+install.packages("lightgbm")
+
+# 2. .qmd ファイル内で読み込んで使用
+library(lightgbm)
+
+dtrain <- lgb.Dataset(
+  data  = as.matrix(train_data[, -which(names(train_data) == "count")]),
+  label = train_data$count
+)
+
+params <- list(objective = "regression", metric = "rmse",
+               num_leaves = 31, learning_rate = 0.1)
+
+lgbm_fit <- lgb.train(params, dtrain, nrounds = 500)
+```
+
+::: {.callout-warning title="注意"}
+- 追加パッケージを使う場合、`quarto render` 時にそのパッケージがインストール済みである必要がある
+- エラーが出たら、まず `install.packages("パッケージ名")` を実行してから再度 `quarto render` する
+- GitHub Pages にデプロイする際、**ビルドは自分の PC 上で行われる**ため、自分の PC にパッケージがあれば問題ない
+:::

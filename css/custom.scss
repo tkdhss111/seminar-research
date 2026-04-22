@@ -1,19 +1,17 @@
 /*-- scss:defaults --*/
-$font-family-sans-serif: "UD Digi Kyokasho NK-R", "UD デジタル 教科書体 NK-R", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
-$presentation-heading-font: "UD Digi Kyokasho NK-B", "UD デジタル 教科書体 NK-B", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
+$font-family-sans-serif: "UD Digi Kyokasho NK-R", "UD Digi Kyokasho NK", "UD デジタル 教科書体 NK-R", "UD デジタル 教科書体 NK", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
+$presentation-heading-font: "UD Digi Kyokasho NK-B", "UD Digi Kyokasho NK", "UD デジタル 教科書体 NK-B", "UD デジタル 教科書体 NK", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
 $presentation-heading-color: #2c3e50;
 $body-color: #333;
 $link-color: #3498db;
 $code-block-bg: #f8f9fa;
-$presentation-font-size-root: 46px;
-$presentation-h1-font-size: 1.5em;
-$presentation-h2-font-size: 1.2em;
-$presentation-h3-font-size: 1.0em;
+$presentation-font-size-root: 28px;
 
 /*-- scss:rules --*/
 
-/* Google Fonts fallback */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+@supports not (font-family: "BIZ UDPGothic") {
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+}
 
 /* ===== 全体の行間・余白 ===== */
 .reveal .slides section {
@@ -23,17 +21,34 @@ $presentation-h3-font-size: 1.0em;
 
 .reveal p {
   margin-bottom: 0.5em;
-  font-size: 0.95em;
+  font-size: 1.1em;
+}
+
+/* ===== h2上余白を統一 ===== */
+html:not(.print-pdf) .reveal .slides section.slide {
+  padding-top: 10px !important;
+}
+
+/* ===== スクロール禁止（.scrollable指定スライドは除外） ===== */
+.reveal .slides section:not(.scrollable) {
+  overflow: hidden;
 }
 
 /* ===== 見出し ===== */
+.reveal section h1,
+.reveal .title-slide h1,
+.reveal .slides section h1 {
+  font-size: 1.4em !important;
+  margin-top: 0;
+  margin-bottom: 0.4em;
+}
 .reveal section h2 {
   border-bottom: 3px solid #3498db;
   padding-top: 0;
   padding-bottom: 0.2em;
   margin-top: 0;
   margin-bottom: 0.4em;
-  font-size: 1.0em;
+  font-size: 1.3em;
 }
 
 .reveal section h3 {
@@ -44,7 +59,7 @@ $presentation-h3-font-size: 1.0em;
 
 /* ===== リスト ===== */
 .reveal ul, .reveal ol {
-  font-size: 0.95em;
+  font-size: 1.0em;
   padding-left: 1.5em;
 }
 
@@ -53,8 +68,13 @@ $presentation-h3-font-size: 1.0em;
   line-height: 1.6;
 }
 
+.reveal li > p {
+  font-size: 1em;
+}
+
 .reveal li > ul,
 .reveal li > ol {
+  font-size: 1em;
   margin-top: 0.2em;
 }
 
@@ -92,29 +112,36 @@ $presentation-h3-font-size: 1.0em;
   padding: 0.5em 0.7em;
 }
 
-/* .smaller 付きスライドのテーブルだけ少し小さく */
 .reveal .smaller table {
   font-size: 0.78em;
 }
 
 /* ===== コード ===== */
 .reveal code {
-  font-size: 0.9em;
+  font-size: 0.72em;
   font-family: "Consolas", "Source Code Pro", monospace;
+}
+
+.reveal pre code {
+  font-size: 1.4em !important;
+}
+
+.reveal .smaller pre code,
+.reveal section.smaller pre code {
+  font-size: 1.15em !important;
 }
 
 /* ===== blockquote ===== */
 .reveal blockquote {
   margin: 0.6em 0;
   padding: 0.5em 1em;
-  font-size: 0.95em;
-  line-height: 1.6;
+  font-size: 0.75em;
+  line-height: 1.5;
 }
 
-/* ===== フッター・ページ番号（フルスクリーンで切れないよう余白確保） ===== */
+/* ===== フッター・ページ番号 ===== */
 .reveal .footer {
   font-size: 0.45em;
-  font-family: "UD Digi Kyokasho NK-R", "UD デジタル 教科書体 NK-R", "BIZ UDPGothic", "Noto Sans JP", sans-serif;
   bottom: 0.5em !important;
   z-index: 10;
 }
@@ -133,12 +160,15 @@ $presentation-h3-font-size: 1.0em;
   text-align: center;
 }
 
-/* ===== タイトルページ: サブタイトル ===== */
-#title-slide .subtitle {
-  font-size: 1.3em;
+/* ===== タイトルページ ===== */
+#title-slide h1.title {
+  font-size: 2.0em !important;
 }
 
-/* ===== タイトルページ: 日本語慣例（所属 → 氏名） ===== */
+#title-slide .subtitle {
+  font-size: 1.0em;
+}
+
 #title-slide .quarto-title-author {
   display: flex;
   flex-direction: column;
@@ -146,14 +176,25 @@ $presentation-h3-font-size: 1.0em;
   .quarto-title-affiliation {
     order: 1;
     margin-bottom: 0.2em;
-    font-size: 1.0em;
   }
   .quarto-title-author-name {
     order: 2;
   }
 }
 
-/* ===== 脚注をスライド下部に固定（本文と重ならないよう余白確保） ===== */
+/* ===== 脚注番号を角括弧表記に変更（指数表記との混同を防止） ===== */
+.reveal .slides section sup {
+  font-size: 0.35em;
+  color: #2874a6;
+}
+.reveal .slides section sup::before {
+  content: "[";
+}
+.reveal .slides section sup::after {
+  content: "]";
+}
+
+/* ===== 脚注をスライド下部に固定 ===== */
 .reveal section:has(.aside-footnotes) > :not(aside):not(.notes) {
   padding-bottom: 0;
 }
@@ -168,9 +209,10 @@ $presentation-h3-font-size: 1.0em;
   left: 0;
   right: 0;
   font-size: 0.5em;
-  color: #666;
-  border-top: 1px solid #ddd;
+  color: #2874a6;
+  border-top: 1px solid #b5d4e8;
   padding-top: 0.3em;
+  padding-left: 3em;
   margin: 0;
   background: white;
   z-index: 5;
@@ -181,13 +223,82 @@ $presentation-h3-font-size: 1.0em;
   padding-left: 1.5em;
 }
 
+/* ===== HTML Flowchart ===== */
+.reveal .flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.5em 0;
+}
+
+.reveal .flow-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.reveal .flow-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 22px;
+  border-radius: 8px;
+  font-size: 28px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #fff;
+  background: #6c757d;
+}
+
+.reveal .flow-node.sm {
+  font-size: 22px;
+  padding: 10px 16px;
+}
+
+.reveal .flow-node.xs {
+  font-size: 16px;
+  padding: 8px 12px;
+}
+
+.reveal .flow-arrow.xs {
+  font-size: 24px;
+  padding: 0 6px;
+}
+
+.reveal .flow-arrow {
+  font-size: 36px;
+  color: #999;
+  padding: 0 12px;
+  line-height: 1;
+}
+
+.reveal .flow-blue { background: #3498db; }
+.reveal .flow-green { background: #2ecc71; }
+.reveal .flow-red { background: #e74c3c; }
+.reveal .flow-gray { background: #95a5a6; }
+.reveal .flow-yellow { background: #f59e0b; }
+
+/* ===== Mermaidフォント統一 ===== */
+.reveal {
+  --mermaid-font-family: "BIZ UDPGothic", "Noto Sans JP", sans-serif;
+}
+
+.reveal .mermaid foreignObject p,
+.reveal .mermaid foreignObject div {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
 /* ===== SVG画像のレスポンシブ対応 ===== */
 .reveal section img[src$=".svg"] {
   max-height: 280px;
   width: auto;
 }
 
-/* ===== 番号付きボックス（手順表示用） ===== */
+/* ===== 番号付きボックス ===== */
 .box-inv {
   display: inline-block;
   width: 1.6em;
@@ -201,4 +312,172 @@ $presentation-h3-font-size: 1.0em;
   margin-right: 0.3em;
   font-size: 0.9em;
   vertical-align: middle;
+}
+
+/* ===== 画像の中央揃え ===== */
+.reveal section p:has(> img),
+.reveal section p:has(> a > img) {
+  text-align: center;
+}
+
+/* ===== 画像・図・テーブルのスライドはみ出し防止 ===== */
+
+.reveal section img {
+  max-height: 500px;
+  object-fit: contain;
+}
+
+.reveal section:not(:has(h2)):not(:has(h3)):not(#title-slide) img {
+  max-height: 620px;
+}
+
+.reveal section.img-slide img {
+  max-height: 620px;
+}
+
+.reveal .cell-output-display img,
+.reveal .cell-output-display svg {
+  max-height: 480px;
+  object-fit: contain;
+}
+
+.reveal .mermaid svg {
+  max-height: 500px;
+  max-width: 100%;
+}
+
+.reveal figure {
+  overflow: hidden;
+}
+
+.reveal table {
+  max-width: 100%;
+}
+
+.reveal section:has(table) {
+  overflow: auto;
+}
+
+.reveal pre {
+  max-height: 450px;
+  overflow: auto;
+}
+
+/* ===== .smaller スライド用の縮小ルール ===== */
+
+.reveal .smaller .pagedtable-wrapper,
+.reveal .smaller .pagedtable {
+  font-size: 0.72em;
+}
+.reveal .smaller .pagedtable td,
+.reveal .smaller .pagedtable th {
+  padding: 0.25em 0.5em;
+}
+
+.reveal .smaller .cell-output pre {
+  font-size: 0.78em;
+  line-height: 1.2;
+}
+
+.reveal .smaller table.dataframe {
+  font-size: 0.62em;
+  line-height: 1.15;
+}
+.reveal .smaller table.dataframe th,
+.reveal .smaller table.dataframe td {
+  padding: 0.15em 0.45em;
+}
+
+.reveal .smaller .cell-output-display small {
+  font-size: 0.7em;
+}
+
+.reveal .smaller .column .cell-output {
+  margin-top: 0.2em;
+}
+.reveal .smaller .column p {
+  margin-bottom: 0.3em;
+}
+
+.reveal .smaller section img,
+.reveal section.smaller img {
+  max-height: 420px;
+}
+
+/* ===== 演習用：expandable 解答 ===== */
+.reveal details.quiz-answer {
+  margin-top: 0.8em;
+  border: 1px solid #b5d4e8;
+  border-left: 6px solid #3498db;
+  border-radius: 4px;
+  background: #f4faff;
+  padding: 0.5em 0.8em;
+}
+.reveal details.quiz-answer > summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #1f618d;
+  list-style: none;
+  padding: 0.15em 0.25em;
+}
+.reveal details.quiz-answer > summary::-webkit-details-marker {
+  display: none;
+}
+.reveal details.quiz-answer > summary::before {
+  content: "\25B6  ";
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.reveal details.quiz-answer[open] > summary::before {
+  content: "\25BC  ";
+}
+.reveal details.quiz-answer > summary:hover {
+  color: #2874a6;
+}
+.reveal details.quiz-answer[open] {
+  background: #eaf4fc;
+}
+.reveal details.quiz-answer pre,
+.reveal details.quiz-answer p {
+  margin-top: 0.4em;
+  margin-bottom: 0.3em;
+}
+
+.reveal details.quiz-answer img,
+.reveal .smaller details.quiz-answer img {
+  max-height: none !important;
+  max-width: 90% !important;
+  height: auto !important;
+  cursor: zoom-in;
+}
+
+/* ===== 画像クリックズーム ===== */
+.reveal .slides section img {
+  cursor: zoom-in;
+}
+
+.img-zoom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  animation: fadeIn 0.15s ease-out;
+}
+.img-zoom-overlay img,
+.img-zoom-overlay svg {
+  max-width: 95vw !important;
+  max-height: 95vh !important;
+  object-fit: contain;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
