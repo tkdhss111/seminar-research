@@ -21,7 +21,7 @@ bibliography: ref/references.bib
 
 format:
   html:
-    embed-resources: false
+    embed-resources: true
     lightbox: true
     toc: true
     toc-depth: 2
